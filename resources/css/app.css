@@ -1,0 +1,26 @@
+/* Orden de capas para que las utilidades de Tailwind ganen prioridad sobre
+   los estilos de componentes de PrimeVue (integración styled mode). */
+@layer tailwind-base, primevue, tailwind-utilities;
+
+@layer tailwind-base {
+    @tailwind base;
+}
+
+@layer tailwind-utilities {
+    @tailwind components;
+    @tailwind utilities;
+}
+
+html,
+body {
+    -webkit-tap-highlight-color: transparent;
+}
+
+/* Oculta la scrollbar en carruseles horizontales (selector de período, etc.) */
+.no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+    display: none;
+}
