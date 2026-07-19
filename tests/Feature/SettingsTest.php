@@ -33,6 +33,31 @@ class SettingsTest extends TestCase
         ]);
     }
 
+    public function test_create_preset_category_with_empty_image_field(): void
+    {
+        // Regresión: el cliente Inertia envía `image` (y `parent_id`) como cadena
+        // vacía cuando el ícono es un preset. Sin `nullable` en la regla `image`,
+        // Laravel fallaba con "must be an image" y la categoría no se creaba.
+        $user = User::factory()->create();
+
+        $this->actingAs($user)->post('/categories', [
+            'type' => 'expense',
+            'name' => 'Cafetería',
+            'icon_type' => 'preset',
+            'icon_value' => 'coffee',
+            'color' => '#f59e0b',
+            'parent_id' => '',
+            'image' => '',
+        ])->assertSessionHasNoErrors();
+
+        $this->assertDatabaseHas('categories', [
+            'user_id' => $user->id,
+            'name' => 'Cafetería',
+            'icon_type' => 'preset',
+            'icon_value' => 'coffee',
+        ]);
+    }
+
     public function test_categories_index_returns_children(): void
     {
         $user = User::factory()->create();

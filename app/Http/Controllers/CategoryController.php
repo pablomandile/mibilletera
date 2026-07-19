@@ -97,7 +97,9 @@ class CategoryController extends Controller
             'name' => ['required', 'string', 'max:60'],
             'icon_type' => ['required', Rule::in(['preset', 'image'])],
             'icon_value' => ['required_if:icon_type,preset', 'nullable', 'string', 'max:120'],
-            'image' => [$category ? 'nullable' : 'required_if:icon_type,image', 'image', 'max:5120'],
+            'image' => $category
+                ? ['nullable', 'image', 'max:5120']
+                : ['nullable', 'required_if:icon_type,image', 'image', 'max:5120'],
             'color' => ['nullable', 'string', 'max:20'],
             'parent_id' => [
                 'nullable',

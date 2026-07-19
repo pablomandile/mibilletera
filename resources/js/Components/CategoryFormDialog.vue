@@ -203,6 +203,10 @@ const remove = () => {
                         </div>
                     </div>
 
+                    <p v-if="Object.keys(form.errors).length" class="text-sm text-rose-500">
+                        {{ Object.values(form.errors)[0] }}
+                    </p>
+
                     <div class="flex gap-2">
                         <button
                             v-if="isEdit"
