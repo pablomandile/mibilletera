@@ -1,9 +1,10 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
-import CategoryIcon from '@/Components/CategoryIcon.vue';
+import TransactionRow from '@/Components/TransactionRow.vue';
+import TransactionDetail from '@/Components/TransactionDetail.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { IconChevronLeft, IconChevronRight, IconArrowsExchange } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 
 const props = defineProps({
     transactions: { type: Array, default: () => [] },
@@ -14,7 +15,6 @@ const props = defineProps({
 });
 
 const fmt = (v) => Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-const money = (v, code) => (props.symbols[code] ?? props.baseSymbol) + ' ' + fmt(v);
 const moneyBase = (v) => props.baseSymbol + ' ' + fmt(v);
 
 const goMonth = (m) => router.get(route('dashboard'), { month: m }, { preserveScroll: true });
@@ -40,10 +40,19 @@ const groups = computed(() => {
         date,
         label: dateLabel(date),
         items,
-        income: items.filter((i) => i.type === 'income').reduce((s, i) => s + i.amount * 1, 0),
-        expense: items.filter((i) => i.type === 'expense').reduce((s, i) => s + i.amount * 1, 0),
     }));
 });
+
+// ---- Ficha de detalle + borrado ----
+const selectedTransaction = ref(null);
+const openDetail = (t) => (selectedTransaction.value = t);
+const closeDetail = () => (selectedTransaction.value = null);
+const deleteTransaction = (id) => {
+    router.delete(route('transactions.destroy', id), {
+        preserveScroll: true,
+        onSuccess: () => (selectedTransaction.value = null),
+    });
+};
 </script>
 
 <template>
@@ -94,40 +103,25 @@ const groups = computed(() => {
                 </div>
 
                 <div class="divide-y divide-surface-100 dark:divide-surface-800">
-                    <div v-for="t in group.items" :key="t.id" class="flex items-center gap-3 px-4 py-3">
-                        <!-- Transferencia -->
-                        <template v-if="t.type === 'transfer'">
-                            <span class="grid place-items-center h-[42px] w-[42px] rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 shrink-0">
-                                <IconArrowsExchange :size="22" />
-                            </span>
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium truncate">Transferencia</p>
-                                <p class="text-xs text-surface-500 truncate">{{ t.from_account }} → {{ t.to_account }}</p>
-                            </div>
-                            <span class="text-sm font-semibold tabular-nums text-surface-500">{{ money(t.amount, t.currency_code) }}</span>
-                        </template>
-
-                        <!-- Gasto / ingreso -->
-                        <template v-else>
-                            <CategoryIcon
-                                :icon-type="t.category?.icon_type ?? 'preset'"
-                                :icon-value="t.category?.icon_value ?? 'category'"
-                                :icon-url="t.category?.icon_url"
-                                :color="t.category?.color ?? '#9ca3af'"
-                                :size="42"
-                                :icon-size="22"
-                            />
-                            <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium truncate">{{ t.category?.name ?? 'Sin categoría' }}</p>
-                                <p v-if="t.note" class="text-xs text-surface-500 truncate">{{ t.note }}</p>
-                            </div>
-                            <span class="text-sm font-semibold tabular-nums" :class="t.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
-                                {{ t.type === 'income' ? '+' : '-' }}{{ money(t.amount, t.currency_code) }}
-                            </span>
-                        </template>
-                    </div>
+                    <TransactionRow
+                        v-for="t in group.items"
+                        :key="t.id"
+                        :transaction="t"
+                        :symbols="symbols"
+                        :base-symbol="baseSymbol"
+                        @open="openDetail"
+                        @delete="deleteTransaction"
+                    />
                 </div>
             </div>
         </div>
+
+        <TransactionDetail
+            :transaction="selectedTransaction"
+            :symbols="symbols"
+            :base-symbol="baseSymbol"
+            @close="closeDetail"
+            @delete="deleteTransaction"
+        />
     </AppLayout>
 </template>

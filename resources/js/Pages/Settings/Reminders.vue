@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash, IconPlus, IconBell } from '@tabler/icons-vue';
+import { confirmAction } from '@/composables/useConfirm';
 
 const props = defineProps({
     reminders: { type: Array, default: () => [] },
@@ -39,8 +40,10 @@ const save = () => {
     if (editingId.value) form.patch(route('reminders.update', editingId.value), opts);
     else form.post(route('reminders.store'), opts);
 };
-const remove = () => {
-    if (!editingId.value || !confirm('¿Eliminar este recordatorio?')) return;
+const remove = async () => {
+    if (!editingId.value) return;
+    const ok = await confirmAction({ title: '¿Eliminar este recordatorio?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
+    if (!ok) return;
     router.delete(route('reminders.destroy', editingId.value), { preserveScroll: true, onSuccess: () => close() });
 };
 const toggleEnabled = (r) => {

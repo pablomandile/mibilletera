@@ -4,6 +4,7 @@ import { useForm, router } from '@inertiajs/vue3';
 import { IconX, IconPhoto, IconCheck, IconTrash } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { pickerIcons } from '@/tablerIcons';
+import { confirmAction } from '@/composables/useConfirm';
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -96,8 +97,10 @@ const submit = () => {
         });
 };
 
-const remove = () => {
-    if (!isEdit.value || !confirm('¿Eliminar esta categoría?')) return;
+const remove = async () => {
+    if (!isEdit.value) return;
+    const ok = await confirmAction({ title: '¿Eliminar esta categoría?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
+    if (!ok) return;
     router.delete(route('categories.destroy', props.category.id), {
         preserveScroll: true,
         onSuccess: () => { emit('saved'); close(); },

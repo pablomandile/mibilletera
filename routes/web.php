@@ -58,7 +58,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Transacciones
     Route::get('/transactions/create', [TransactionController::class, 'create'])->name('transactions.create');
+    Route::get('/transactions/{transaction}/edit', [TransactionController::class, 'edit'])->name('transactions.edit');
     Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');
+    Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
 
     // Cuentas

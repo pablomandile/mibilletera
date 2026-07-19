@@ -3,6 +3,7 @@ import { ref, watch, computed } from 'vue';
 import { useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
+import { confirmAction } from '@/composables/useConfirm';
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -62,8 +63,9 @@ const submit = () => {
     }
 };
 
-const remove = () => {
-    if (!confirm('¿Eliminar esta cuenta?')) return;
+const remove = async () => {
+    const ok = await confirmAction({ title: '¿Eliminar esta cuenta?', message: 'Solo se puede eliminar una cuenta sin movimientos.', confirmLabel: 'Eliminar', danger: true });
+    if (!ok) return;
     router.delete(route('accounts.destroy', props.account.id), { preserveScroll: true, onSuccess: () => close() });
 };
 </script>

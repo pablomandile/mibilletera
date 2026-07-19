@@ -4,6 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import {
     IconHome2,
     IconChartPie,
@@ -46,6 +47,7 @@ watch(
 <template>
     <div class="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
         <Toast position="top-center" />
+        <ConfirmDialog />
 
         <!-- ===================== Sidebar (desktop) ===================== -->
         <aside

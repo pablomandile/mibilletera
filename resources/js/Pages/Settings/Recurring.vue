@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash, IconPlus, IconRepeat } from '@tabler/icons-vue';
+import { confirmAction } from '@/composables/useConfirm';
 
 const props = defineProps({
     items: { type: Array, default: () => [] },
@@ -74,8 +75,10 @@ const save = () => {
     if (editingId.value) form.patch(route('recurring.update', editingId.value), opts);
     else form.post(route('recurring.store'), opts);
 };
-const remove = () => {
-    if (!editingId.value || !confirm('¿Eliminar esta recurrente?')) return;
+const remove = async () => {
+    if (!editingId.value) return;
+    const ok = await confirmAction({ title: '¿Eliminar esta recurrente?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
+    if (!ok) return;
     router.delete(route('recurring.destroy', editingId.value), { preserveScroll: true, onSuccess: () => close() });
 };
 </script>

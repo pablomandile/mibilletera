@@ -2,32 +2,38 @@
 import { ref, computed, watch } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import {
-    IconChevronLeft, IconPhoto, IconCheck, IconBackspace, IconPlus, IconCalendarEvent, IconArrowRight,
+    IconChevronLeft, IconPhoto, IconCheck, IconBackspace, IconPlus, IconCalendarEvent, IconArrowRight, IconTrash,
 } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import CategoryFormDialog from '@/Components/CategoryFormDialog.vue';
+import ConfirmDialog from '@/Components/ConfirmDialog.vue';
+import { confirmAction } from '@/composables/useConfirm';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
     accounts: { type: Array, default: () => [] },
     currencies: { type: Array, default: () => [] },
     defaultCurrency: { type: String, default: 'ARS' },
+    transaction: { type: Object, default: null }, // si viene, es edición
 });
 
 const page = usePage();
+const tx = props.transaction;
+const isEdit = computed(() => !!props.transaction);
 
-const type = ref('expense'); // expense | income | transfer
-const selectedCategoryId = ref(null);
-const selectedAccountId = ref(props.accounts[0]?.id ?? null);
-const toAccountId = ref(props.accounts[1]?.id ?? props.accounts[0]?.id ?? null);
-const expression = ref('');
-const exchangeRate = ref(1);
-const transferAmount = ref(null); // monto recibido (transferencia entre monedas distintas)
-const note = ref('');
+const type = ref(tx?.type ?? 'expense'); // expense | income | transfer
+const selectedCategoryId = ref(tx?.category_id ?? null);
+const selectedAccountId = ref(tx?.account_id ?? props.accounts[0]?.id ?? null);
+const toAccountId = ref(tx?.to_account_id ?? props.accounts[1]?.id ?? props.accounts[0]?.id ?? null);
+const expression = ref(tx ? String(tx.amount) : '');
+const exchangeRate = ref(tx?.exchange_rate ?? 1);
+const transferAmount = ref(tx?.transfer_amount ?? null); // monto recibido (transferencia entre monedas distintas)
+const note = ref(tx?.note ?? '');
 const photo = ref(null);
-const photoPreview = ref(null);
+const photoPreview = ref(tx?.photo_url ?? null);
 const today = new Date();
 const transactionDate = ref(
+    tx?.transaction_date ??
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 );
 const showNewCategory = ref(false);
@@ -149,10 +155,21 @@ function save() {
         form.photo = photo.value;
     }
 
-    form.post(route('transactions.store'), { forceFormData: true });
+    const url = isEdit.value
+        ? route('transactions.update', props.transaction.id)
+        : route('transactions.store');
+
+    form.post(url, { forceFormData: true });
 }
 
 const close = () => router.visit(route('dashboard'));
+
+const remove = async () => {
+    if (!isEdit.value) return;
+    const ok = await confirmAction({ title: '¿Eliminar este movimiento?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
+    if (!ok) return;
+    router.delete(route('transactions.destroy', props.transaction.id));
+};
 
 watch(
     () => page.props.flash?.created_category_id,
@@ -172,15 +189,18 @@ const tabClass = (t, activeColor) =>
 </script>
 
 <template>
-    <Head title="Agregar" />
+    <Head :title="isEdit ? 'Editar' : 'Agregar'" />
 
     <div class="flex flex-col h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
         <header class="flex items-center justify-between h-14 px-3 shrink-0">
-            <button type="button" class="flex items-center gap-1 text-surface-500" @click="close">
+            <button type="button" class="flex items-center gap-1 text-surface-500 w-20" @click="close">
                 <IconChevronLeft :size="22" /> Cancelar
             </button>
-            <h1 class="font-semibold">Agregar</h1>
-            <span class="w-20"></span>
+            <h1 class="font-semibold">{{ isEdit ? 'Editar' : 'Agregar' }}</h1>
+            <button v-if="isEdit" type="button" class="flex items-center justify-end w-20 text-rose-500" @click="remove">
+                <IconTrash :size="20" />
+            </button>
+            <span v-else class="w-20"></span>
         </header>
 
         <!-- Tabs -->
@@ -288,5 +308,6 @@ const tabClass = (t, activeColor) =>
         </div>
 
         <CategoryFormDialog v-model="showNewCategory" :type="type === 'income' ? 'income' : 'expense'" @saved="showNewCategory = false" />
+        <ConfirmDialog />
     </div>
 </template>
