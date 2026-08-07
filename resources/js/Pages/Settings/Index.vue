@@ -1,6 +1,7 @@
 <script setup>
 import { ref, onMounted, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
+import InstallButton from '@/Components/InstallButton.vue';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
@@ -70,6 +71,9 @@ const logout = () => router.post(route('logout'));
                     <p class="text-sm text-surface-500 truncate">{{ user.email }}</p>
                 </div>
             </div>
+
+            <!-- Instalar la PWA (solo aparece si todavía no está instalada) -->
+            <InstallButton />
 
             <!-- Grupos -->
             <div v-for="group in groups" :key="group.title" class="space-y-2">

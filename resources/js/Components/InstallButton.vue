@@ -1,6 +1,6 @@
 <script setup>
 import { ref } from 'vue';
-import { IconDownload, IconX, IconShare, IconSquarePlus, IconDotsVertical } from '@tabler/icons-vue';
+import { IconDownload, IconX, IconShare, IconSquarePlus, IconDotsVertical, IconChevronRight } from '@tabler/icons-vue';
 import { usePwaInstall } from '@/composables/usePwaInstall';
 
 const { canInstall, isIos, install } = usePwaInstall();
@@ -25,13 +25,16 @@ async function onClick() {
     <button
         v-if="canInstall"
         type="button"
-        class="shrink-0 grid place-items-center h-9 w-9 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-50"
-        title="Instalar app"
+        class="w-full flex items-center gap-3 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 px-4 py-3.5 text-left transition-colors hover:bg-emerald-500/20 disabled:opacity-50"
         aria-label="Instalar app"
         :disabled="busy"
         @click="onClick"
     >
-        <IconDownload :size="22" :stroke="1.8" />
+        <span class="grid place-items-center h-9 w-9 rounded-lg bg-emerald-500/15 text-emerald-500 shrink-0">
+            <IconDownload :size="20" :stroke="1.8" />
+        </span>
+        <span class="flex-1 min-w-0 text-sm font-medium text-emerald-600 dark:text-emerald-400">Instalar app</span>
+        <IconChevronRight :size="18" class="text-emerald-500/60 shrink-0" />
     </button>
 
     <!-- Instrucciones para instalar a mano -->

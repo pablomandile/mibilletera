@@ -4,7 +4,6 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import NotificationBell from '@/Components/NotificationBell.vue';
-import InstallButton from '@/Components/InstallButton.vue';
 import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import {
     IconHome2,
@@ -116,7 +115,6 @@ watch(
                         <h1 class="text-base font-semibold truncate">{{ title }}</h1>
                     </slot>
                 </div>
-                <InstallButton />
                 <NotificationBell />
             </header>
 
@@ -129,7 +127,6 @@ watch(
                         <h1 class="text-xl font-semibold">{{ title }}</h1>
                     </slot>
                 </div>
-                <InstallButton />
                 <NotificationBell />
             </header>
 
