@@ -1,7 +1,8 @@
 <script setup>
-import { ref, onMounted, computed } from 'vue';
+import { ref, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InstallButton from '@/Components/InstallButton.vue';
+import { useTheme } from '@/composables/useTheme';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
@@ -18,14 +19,8 @@ const user = computed(() => page.props.auth?.user ?? {});
 const isAdmin = computed(() => user.value.role === 'admin');
 const currentCurrency = computed(() => user.value.default_currency ?? 'ARS');
 
-// --- Tema ---
-const isDark = ref(true);
-onMounted(() => { isDark.value = document.documentElement.classList.contains('dark'); });
-const toggleTheme = () => {
-    isDark.value = !isDark.value;
-    document.documentElement.classList.toggle('dark', isDark.value);
-    try { localStorage.setItem('theme', isDark.value ? 'dark' : 'light'); } catch (e) { /* noop */ }
-};
+// --- Tema --- (estado compartido con el botón del header)
+const { isDark, toggleTheme } = useTheme();
 
 // --- Moneda ---
 const showCurrency = ref(false);

@@ -4,6 +4,7 @@ import { Link, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
 import NotificationBell from '@/Components/NotificationBell.vue';
+import ThemeToggle from '@/Components/ThemeToggle.vue';
 import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import {
     IconHome2,
@@ -52,12 +53,13 @@ watch(
         <aside
             class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 z-30 border-r border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900"
         >
-            <Link href="/dashboard" class="flex items-center gap-2.5 px-5 h-16 border-b border-surface-200 dark:border-surface-800">
-                <!-- El logo con texto tiene el "Mi" en azul oscuro y se pierde sobre el tema
-                     oscuro, así que va la marca sola y el nombre en texto, que sí se adapta. -->
-                <img src="/icons/mibilletera-logo.png?v=2" alt="" class="h-9 w-9 object-contain shrink-0" />
-                <span class="font-semibold text-lg truncate">Mi Billetera</span>
-            </Link>
+            <div class="flex items-center px-3 h-16 border-b border-surface-200 dark:border-surface-800">
+                <!-- El logo con texto trae el "Mi" en azul oscuro, así que en tema claro va
+                     sobre una pastilla blanca para que no se pierda contra el fondo. -->
+                <span class="inline-flex items-center rounded-xl bg-white px-2 py-0.5 ring-1 ring-black/5 dark:bg-transparent dark:ring-0 dark:px-0">
+                    <img src="/icons/mibilletera_texto.png" alt="Mi Billetera" class="h-14 w-auto" />
+                </span>
+            </div>
 
             <nav class="flex-1 px-3 py-4 space-y-1">
                 <Link
@@ -109,11 +111,15 @@ watch(
             <header
                 class="md:hidden sticky top-0 z-20 flex items-center gap-2 h-14 px-4 border-b border-surface-200 dark:border-surface-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur"
             >
+                <Link href="/dashboard" class="shrink-0" aria-label="Inicio">
+                    <img src="/icons/mibilletera-logo.png" alt="Mi Billetera" class="h-8 w-auto" />
+                </Link>
                 <div class="flex-1 min-w-0">
                     <slot name="header">
                         <h1 class="text-base font-semibold truncate">{{ title }}</h1>
                     </slot>
                 </div>
+                <ThemeToggle />
                 <NotificationBell />
             </header>
 
@@ -126,6 +132,7 @@ watch(
                         <h1 class="text-xl font-semibold">{{ title }}</h1>
                     </slot>
                 </div>
+                <ThemeToggle />
                 <NotificationBell />
             </header>
 
