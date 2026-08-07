@@ -5,6 +5,16 @@
     AddType text/javascript .js
 </IfModule>
 
+# El service worker y el manifest NO se pueden cachear largo. El CDN de Hostinger
+# les aplicaba max-age=604800, así que una versión nueva del SW tardaba hasta 7
+# días en llegar a los usuarios: el navegador chequeaba /sw.js y el borde le
+# devolvía el viejo. Los íconos van versionados por ?v= desde el HTML.
+<IfModule mod_headers.c>
+    <FilesMatch "^(sw\.js|manifest\.webmanifest)$">
+        Header set Cache-Control "no-cache, must-revalidate, max-age=0"
+    </FilesMatch>
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes

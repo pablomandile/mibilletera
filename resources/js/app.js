@@ -59,9 +59,16 @@ createInertiaApp({
     },
 });
 
-// Registro del service worker (PWA instalable)
+// Registro del service worker (PWA instalable).
+//
+// El ?v= no es decorativo: el CDN de Hostinger tenía cacheado /sw.js a secas por
+// 7 días y servía una versión vieja, así que las actualizaciones del SW no
+// llegaban. public/.htaccess ya manda no-cache para sw.js, pero eso solo aplica a
+// entradas nuevas del borde; con la URL versionada salteamos la vieja.
+// De acá en más no hace falta tocar este número: con el no-cache puesto, el
+// navegador detecta los cambios del archivo en el chequeo normal de update.
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('/sw.js').catch(() => {});
+        navigator.serviceWorker.register('/sw.js?v=2').catch(() => {});
     });
 }
