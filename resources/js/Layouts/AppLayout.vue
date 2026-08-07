@@ -54,9 +54,10 @@ watch(
             class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 z-30 border-r border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900"
         >
             <div class="flex items-center px-3 h-16 border-b border-surface-200 dark:border-surface-800">
-                <!-- El logo con texto trae el "Mi" en azul oscuro, así que en tema claro va
-                     sobre una pastilla blanca para que no se pierda contra el fondo. -->
-                <span class="inline-flex items-center rounded-xl bg-white px-2 py-0.5 ring-1 ring-black/5 dark:bg-transparent dark:ring-0 dark:px-0">
+                <!-- El logo con texto trae el "Mi" en azul oscuro, así que va siempre sobre
+                     una pastilla blanca: sin ella, en tema oscuro esa palabra se pierde
+                     contra el fondo y la bajada queda ilegible. -->
+                <span class="inline-flex items-center rounded-xl bg-white px-2 py-0.5 ring-1 ring-black/5 dark:ring-white/10">
                     <img src="/icons/mibilletera_texto.png" alt="Mi Billetera" class="h-14 w-auto" />
                 </span>
             </div>
