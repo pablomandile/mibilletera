@@ -9,9 +9,13 @@
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
         <meta name="apple-mobile-web-app-title" content="Mi Billetera">
 
+        {{-- El ?v= es obligatorio al cambiar un ícono: la URL es fija y el navegador
+             (sobre todo Chrome mobile) la cachea por días. Subilo junto con el número
+             de CACHE en public/sw.js y con el ?v= del manifest. --}}
         <link rel="manifest" href="/manifest.webmanifest">
-        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
-        <link rel="icon" type="image/png" href="/icons/icon-192.png">
+        <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png?v=2">
+        <link rel="icon" type="image/png" href="/icons/icon-192.png?v=2">
+        <link rel="shortcut icon" href="/favicon.ico?v=2">
 
         <title inertia>{{ config('app.name', 'Mi Billetera') }}</title>
 

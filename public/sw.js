@@ -2,12 +2,12 @@
 // Estrategia: network-first para navegaciones (la app necesita el servidor),
 // con caché de respaldo para recursos estáticos y una página offline básica.
 
-const CACHE = 'mibilletera-v1';
-const PRECACHE = [
-    '/icons/icon-192.png',
-    '/icons/icon-512.png',
-    '/manifest.webmanifest',
-];
+// Subí este número cada vez que cambien los íconos o el manifest: al activarse,
+// el SW borra las caches con otro nombre y así se tiran los archivos viejos.
+const CACHE = 'mibilletera-v2';
+// Los íconos no se precachean: se guardan solos la primera vez que se piden y
+// así no hay que mantener la versión de su URL en dos lugares.
+const PRECACHE = ['/manifest.webmanifest'];
 
 self.addEventListener('install', (event) => {
     event.waitUntil(
@@ -33,8 +33,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // Recursos compilados / estáticos: cache-first
-    if (/\/(build|icons)\//.test(request.url)) {
+    // Solo /build/: los nombres llevan hash de contenido, así que un archivo dado
+    // nunca cambia y es seguro servirlo de caché para siempre.
+    //
+    // Los íconos NO van acá: su URL es fija (/icons/icon-192.png), así que
+    // cache-first los dejaba congelados aunque se subieran nuevos. Van por la
+    // rama network-first de abajo.
+    if (/\/build\//.test(request.url)) {
         event.respondWith(
             caches.match(request).then(
                 (cached) =>
