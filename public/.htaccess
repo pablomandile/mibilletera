@@ -1,3 +1,10 @@
+# Tipos MIME de la PWA. Sin esto Hostinger sirve el manifest como text/plain:
+# Chrome lo tolera, pero incumple la spec y otros navegadores pueden rechazarlo.
+<IfModule mod_mime.c>
+    AddType application/manifest+json .webmanifest
+    AddType text/javascript .js
+</IfModule>
+
 <IfModule mod_rewrite.c>
     <IfModule mod_negotiation.c>
         Options -MultiViews -Indexes
