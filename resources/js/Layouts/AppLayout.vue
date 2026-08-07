@@ -11,7 +11,6 @@ import {
     IconReportAnalytics,
     IconUser,
     IconPlus,
-    IconWallet,
     IconLogout,
 } from '@tabler/icons-vue';
 
@@ -53,12 +52,12 @@ watch(
         <aside
             class="hidden md:flex md:flex-col fixed inset-y-0 left-0 w-64 z-30 border-r border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900"
         >
-            <div class="flex items-center gap-2 px-5 h-16 border-b border-surface-200 dark:border-surface-800">
-                <span class="grid place-items-center h-9 w-9 rounded-xl bg-primary text-primary-contrast">
-                    <IconWallet :size="22" :stroke="2" />
-                </span>
-                <span class="font-semibold text-lg">Mi Billetera</span>
-            </div>
+            <Link href="/dashboard" class="flex items-center gap-2.5 px-5 h-16 border-b border-surface-200 dark:border-surface-800">
+                <!-- El logo con texto tiene el "Mi" en azul oscuro y se pierde sobre el tema
+                     oscuro, así que va la marca sola y el nombre en texto, que sí se adapta. -->
+                <img src="/icons/mibilletera-logo.png?v=2" alt="" class="h-9 w-9 object-contain shrink-0" />
+                <span class="font-semibold text-lg truncate">Mi Billetera</span>
+            </Link>
 
             <nav class="flex-1 px-3 py-4 space-y-1">
                 <Link
