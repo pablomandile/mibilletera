@@ -23,6 +23,12 @@ class DashboardController extends Controller
         $start = $date->copy()->startOfMonth();
         $end = $date->copy()->endOfMonth();
 
+        // Filtro del listado (los totales siguen siendo los del mes completo).
+        $filter = $request->query('type');
+        if (! in_array($filter, ['income', 'expense', 'transfer'], true)) {
+            $filter = null;
+        }
+
         $transactions = $user->transactions()
             ->with([
                 'category:id,name,icon_type,icon_value,color',
@@ -40,8 +46,12 @@ class DashboardController extends Controller
 
         $symbols = Currency::pluck('symbol', 'code');
 
+        $visible = $filter
+            ? $transactions->where('type', $filter)->values()
+            : $transactions;
+
         return Inertia::render('Dashboard', [
-            'transactions' => $transactions->map(fn ($t) => [
+            'transactions' => $visible->map(fn ($t) => [
                 'id' => $t->id,
                 'type' => $t->type,
                 'amount' => (float) $t->amount,
@@ -72,6 +82,7 @@ class DashboardController extends Controller
                 'expense' => $expense,
                 'balance' => $income - $expense,
             ],
+            'filter' => $filter,
             'baseSymbol' => $symbols[$user->default_currency] ?? '$',
             'symbols' => $symbols,
         ]);

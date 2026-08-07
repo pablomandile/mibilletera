@@ -119,4 +119,45 @@ class TransactionFlowTest extends TestCase
                 ->has('byCategory', 1)
             );
     }
+
+    public function test_dashboard_filters_the_list_by_type_without_touching_totals(): void
+    {
+        $user = User::factory()->create();
+        $account = $user->accounts()->first();
+        $expenseCat = $user->categories()->where('type', 'expense')->first();
+        $incomeCat = $user->categories()->where('type', 'income')->first();
+
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $expenseCat->id, 'type' => 'expense',
+            'amount' => 15000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => now(),
+        ]);
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $incomeCat->id, 'type' => 'income',
+            'amount' => 90000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => now(),
+        ]);
+
+        // Sin filtro: los dos movimientos.
+        $this->actingAs($user)->get('/dashboard')
+            ->assertInertia(fn (Assert $page) => $page->has('transactions', 2)->where('filter', null));
+
+        // Filtrado: solo el gasto, pero los totales siguen siendo los del mes completo.
+        $this->actingAs($user)->get('/dashboard?type=expense')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('filter', 'expense')
+                ->has('transactions', 1)
+                ->where('transactions.0.type', 'expense')
+                ->where('totals.income', fn ($v) => (float) $v === 90000.0)
+                ->where('totals.expense', fn ($v) => (float) $v === 15000.0)
+            );
+
+        $this->actingAs($user)->get('/dashboard?type=income')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('transactions', 1)
+                ->where('transactions.0.type', 'income')
+            );
+
+        // Un tipo inválido se ignora en vez de vaciar el listado.
+        $this->actingAs($user)->get('/dashboard?type=cualquiera')
+            ->assertInertia(fn (Assert $page) => $page->where('filter', null)->has('transactions', 2));
+    }
 }

@@ -4,20 +4,32 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import TransactionRow from '@/Components/TransactionRow.vue';
 import TransactionDetail from '@/Components/TransactionDetail.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight, IconX } from '@tabler/icons-vue';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     transactions: { type: Array, default: () => [] },
     period: { type: Object, required: true },
     totals: { type: Object, required: true },
+    filter: { type: String, default: null }, // income | expense | transfer | null
     baseSymbol: { type: String, default: '$' },
     symbols: { type: Object, default: () => ({}) },
 });
 
-const fmt = (v) => Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-const moneyBase = (v) => props.baseSymbol + ' ' + fmt(v);
+const moneyBase = (v) => formatMoney(v, props.baseSymbol);
 
-const goMonth = (m) => router.get(route('dashboard'), { month: m }, { preserveScroll: true });
+const visit = (params) => router.get(route('dashboard'), params, { preserveScroll: true });
+
+const goMonth = (m) => visit({ month: m, ...(props.filter ? { type: props.filter } : {}) });
+
+// Tocar la tarjeta de Ingresos/Gastos filtra el listado; volver a tocarla lo limpia.
+const toggleFilter = (type) =>
+    visit({ month: props.period.month, ...(props.filter === type ? {} : { type }) });
+
+const clearFilter = () => visit({ month: props.period.month });
+
+const FILTER_LABELS = { income: 'ingresos', expense: 'gastos', transfer: 'transferencias' };
+const filterLabel = computed(() => FILTER_LABELS[props.filter] ?? '');
 
 function dateLabel(dateStr) {
     const d = new Date(dateStr + 'T00:00:00');
@@ -72,17 +84,29 @@ const deleteTransaction = (id) => {
         </template>
 
         <div class="mx-auto max-w-3xl space-y-4">
-            <!-- Resumen del período (en moneda base) -->
+            <!-- Resumen del período (en moneda base). Ingresos y Gastos filtran el listado. -->
             <div class="grid grid-cols-3 gap-3">
-                <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
+                <button
+                    type="button"
+                    class="text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
+                    :class="filter === 'income' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-surface-200 dark:border-surface-800 hover:border-emerald-500/50'"
+                    :aria-pressed="filter === 'income'"
+                    @click="toggleFilter('income')"
+                >
                     <p class="text-xs text-surface-500">Ingresos</p>
                     <p class="mt-1 text-sm md:text-lg font-semibold text-emerald-500 truncate">{{ moneyBase(totals.income) }}</p>
-                </div>
-                <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
+                </button>
+                <button
+                    type="button"
+                    class="text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
+                    :class="filter === 'expense' ? 'border-rose-500 ring-1 ring-rose-500' : 'border-surface-200 dark:border-surface-800 hover:border-rose-500/50'"
+                    :aria-pressed="filter === 'expense'"
+                    @click="toggleFilter('expense')"
+                >
                     <p class="text-xs text-surface-500">Gastos</p>
                     <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 truncate">{{ moneyBase(totals.expense) }}</p>
-                </div>
-                <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
+                </button>
+                <div class="min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
                     <p class="text-xs text-surface-500">Balance</p>
                     <p class="mt-1 text-sm md:text-lg font-semibold truncate" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
                         {{ moneyBase(totals.balance) }}
@@ -90,8 +114,22 @@ const deleteTransaction = (id) => {
                 </div>
             </div>
 
+            <!-- Chip de filtro activo -->
+            <div v-if="filter" class="flex items-center gap-2">
+                <span class="inline-flex items-center gap-1.5 rounded-full bg-primary/10 text-primary text-xs font-medium pl-3 pr-1.5 py-1.5">
+                    Mostrando solo {{ filterLabel }}
+                    <button type="button" class="grid place-items-center h-5 w-5 rounded-full hover:bg-primary/20" aria-label="Quitar filtro" @click="clearFilter">
+                        <IconX :size="14" />
+                    </button>
+                </span>
+            </div>
+
             <div v-if="!groups.length" class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-10 text-center">
-                <p class="text-surface-500">
+                <p v-if="filter" class="text-surface-500">
+                    No hay {{ filterLabel }} en este período.
+                    <button type="button" class="text-primary font-semibold" @click="clearFilter">Ver todos los movimientos</button>
+                </p>
+                <p v-else class="text-surface-500">
                     No hay movimientos en este período. Tocá el botón
                     <span class="text-primary font-semibold">+</span> para cargar uno.
                 </p>
