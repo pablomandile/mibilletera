@@ -5,6 +5,7 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash, IconPlus, IconRepeat } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     items: { type: Array, default: () => [] },
@@ -13,7 +14,7 @@ const props = defineProps({
     symbols: { type: Object, default: () => ({}) },
 });
 
-const money = (v, code) => (props.symbols[code] ?? '$') + ' ' + Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const money = (v, code) => formatMoney(v, props.symbols[code] ?? '$');
 
 const FREQ = [
     { value: 'daily', label: 'Día' },

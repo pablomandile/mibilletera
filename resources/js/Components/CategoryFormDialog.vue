@@ -115,7 +115,7 @@ const remove = async () => {
             class="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-black/60 p-0 sm:p-4"
             @click.self="close"
         >
-            <div class="w-full sm:max-w-md bg-white dark:bg-surface-900 rounded-t-3xl sm:rounded-2xl border border-surface-200 dark:border-surface-800 max-h-[90vh] overflow-y-auto">
+            <div class="w-full sm:max-w-md bg-white dark:bg-surface-900 rounded-t-3xl sm:rounded-2xl border border-surface-200 dark:border-surface-800 max-h-[90vh] overflow-y-auto overflow-x-hidden">
                 <div class="flex items-center justify-between px-5 h-14 border-b border-surface-200 dark:border-surface-800 sticky top-0 bg-white dark:bg-surface-900">
                     <button type="button" class="text-surface-500" @click="close"><IconX :size="22" /></button>
                     <h2 class="font-semibold">{{ isEdit ? 'Editar categoría' : 'Nueva categoría' }}</h2>
@@ -133,7 +133,7 @@ const remove = async () => {
                             :size="52"
                             :icon-size="28"
                         />
-                        <div class="flex-1">
+                        <div class="flex-1 min-w-0">
                             <input
                                 v-model="form.name"
                                 type="text"
@@ -166,7 +166,7 @@ const remove = async () => {
 
                     <!-- Selector de ícono -->
                     <div v-show="iconMode === 'preset'">
-                        <div class="grid grid-cols-6 gap-2 max-h-52 overflow-y-auto p-1">
+                        <div class="grid grid-cols-6 gap-2 max-h-52 overflow-y-auto overflow-x-hidden p-1">
                             <button
                                 v-for="key in pickerIcons"
                                 :key="key"

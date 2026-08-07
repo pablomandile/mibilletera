@@ -3,6 +3,7 @@ import { ref } from 'vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { IconArrowsExchange, IconTrash } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     transaction: { type: Object, required: true },
@@ -11,8 +12,7 @@ const props = defineProps({
 });
 const emit = defineEmits(['open', 'delete']);
 
-const fmt = (v) => Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-const money = (v, code) => (props.symbols[code] ?? props.baseSymbol) + ' ' + fmt(v);
+const money = (v, code) => formatMoney(v, props.symbols[code] ?? props.baseSymbol);
 
 // ---- Swipe a la izquierda para borrar ----
 const dx = ref(0);

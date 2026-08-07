@@ -4,6 +4,7 @@ import { Link } from '@inertiajs/vue3';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { IconX, IconPencil, IconTrash, IconArrowsExchange } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     transaction: { type: Object, default: null },
@@ -15,8 +16,7 @@ const emit = defineEmits(['close', 'delete']);
 const t = computed(() => props.transaction);
 const isTransfer = computed(() => t.value?.type === 'transfer');
 
-const fmt = (v) => Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
-const money = (v, code) => (props.symbols[code] ?? props.baseSymbol) + ' ' + fmt(v);
+const money = (v, code) => formatMoney(v, props.symbols[code] ?? props.baseSymbol);
 
 const dateLabel = computed(() => {
     if (!t.value) return '';

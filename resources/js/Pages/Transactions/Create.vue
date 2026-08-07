@@ -8,6 +8,7 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import CategoryFormDialog from '@/Components/CategoryFormDialog.vue';
 import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { formatAmount, formatInteger } from '@/money';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
@@ -21,11 +22,18 @@ const page = usePage();
 const tx = props.transaction;
 const isEdit = computed(() => !!props.transaction);
 
+// Al editar, arrancamos con los 2 decimales explícitos (30000.3 → "30000.30").
+function toExpression(value) {
+    const n = Number(value);
+    if (!isFinite(n)) return '';
+    return Number.isInteger(n) ? String(n) : n.toFixed(2);
+}
+
 const type = ref(tx?.type ?? 'expense'); // expense | income | transfer
 const selectedCategoryId = ref(tx?.category_id ?? null);
 const selectedAccountId = ref(tx?.account_id ?? props.accounts[0]?.id ?? null);
 const toAccountId = ref(tx?.to_account_id ?? props.accounts[1]?.id ?? props.accounts[0]?.id ?? null);
-const expression = ref(tx ? String(tx.amount) : '');
+const expression = ref(tx ? toExpression(tx.amount) : '');
 const exchangeRate = ref(tx?.exchange_rate ?? 1);
 const transferAmount = ref(tx?.transfer_amount ?? null); // monto recibido (transferencia entre monedas distintas)
 const note = ref(tx?.note ?? '');
@@ -80,10 +88,23 @@ function evaluate(expr) {
 
 const amount = computed(() => evaluate(expression.value));
 const hasOperator = computed(() => /[+\-×÷]/.test(expression.value.slice(1)));
-const displayAmount = computed(() => amount.value.toLocaleString('en-US', { maximumFractionDigits: 2 }));
-const baseConverted = computed(() => (amount.value * (Number(exchangeRate.value) || 0)).toLocaleString('es-AR', { maximumFractionDigits: 2 }));
+
+// Mientras se tipea un número suelto mostramos la cadena tal cual se escribió, para
+// no perder la coma ni los ceros finales ("30000.30" → "30.000,30", no "30.000,3").
+// Con una operación en curso ya no hay "lo tipeado", así que mostramos el resultado.
+function formatTyped(raw) {
+    if (raw === '') return '0';
+    const [int, dec] = raw.split('.');
+    return dec === undefined ? formatInteger(int) : `${formatInteger(int)},${dec}`;
+}
+
+const displayAmount = computed(() =>
+    hasOperator.value ? formatAmount(amount.value) : formatTyped(expression.value)
+);
+const baseConverted = computed(() => formatAmount(amount.value * (Number(exchangeRate.value) || 0)));
 
 const isOperator = (ch) => ['+', '-', '×', '÷'].includes(ch);
+const MAX_DECIMALS = 2;
 
 function press(key) {
     const expr = expression.value;
@@ -93,12 +114,15 @@ function press(key) {
         expression.value = isOperator(last) ? expr.slice(0, -1) + key : expr + key;
         return;
     }
+    const segment = expr.split(/[+\-×÷]/).pop();
     if (key === '.') {
-        const segment = expr.split(/[+\-×÷]/).pop();
         if (segment.includes('.')) return;
         expression.value = segment === '' ? expr + '0.' : expr + '.';
         return;
     }
+    // Tope de decimales: lo que se ve tecleado es exactamente lo que se guarda.
+    const dot = segment.indexOf('.');
+    if (dot !== -1 && segment.length - dot - 1 >= MAX_DECIMALS) return;
     expression.value = expr + key;
 }
 const backspace = () => (expression.value = expression.value.slice(0, -1));
@@ -191,7 +215,7 @@ const tabClass = (t, activeColor) =>
 <template>
     <Head :title="isEdit ? 'Editar' : 'Agregar'" />
 
-    <div class="flex flex-col h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
+    <div class="flex flex-col h-screen overflow-x-hidden bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
         <header class="flex items-center justify-between h-14 px-3 shrink-0">
             <button type="button" class="flex items-center gap-1 text-surface-500 w-20" @click="close">
                 <IconChevronLeft :size="22" /> Cancelar
@@ -206,37 +230,37 @@ const tabClass = (t, activeColor) =>
         <!-- Tabs -->
         <div class="px-3 shrink-0">
             <div class="grid grid-cols-3 rounded-xl bg-surface-200/60 dark:bg-surface-800 p-1 max-w-md mx-auto">
-                <button type="button" class="py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('expense', 'text-rose-500')" @click="type = 'expense'; selectedCategoryId = null">Gasto</button>
-                <button type="button" class="py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('income', 'text-emerald-500')" @click="type = 'income'; selectedCategoryId = null">Ingreso</button>
-                <button type="button" class="py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('transfer', 'text-primary')" @click="type = 'transfer'">Transferencia</button>
+                <button type="button" class="min-w-0 truncate py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('expense', 'text-rose-500')" @click="type = 'expense'; selectedCategoryId = null">Gasto</button>
+                <button type="button" class="min-w-0 truncate py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('income', 'text-emerald-500')" @click="type = 'income'; selectedCategoryId = null">Ingreso</button>
+                <button type="button" class="min-w-0 truncate py-2 rounded-lg text-sm font-semibold transition" :class="tabClass('transfer', 'text-primary')" @click="type = 'transfer'">Transferencia</button>
             </div>
         </div>
 
         <!-- Área superior: categorías (gasto/ingreso) o cuentas (transferencia) -->
         <div class="flex-1 overflow-y-auto px-3 py-4">
             <div v-if="type !== 'transfer'" class="grid grid-cols-4 gap-y-4 gap-x-2 max-w-md mx-auto">
-                <button v-for="cat in filteredCategories" :key="cat.id" type="button" class="flex flex-col items-center gap-1.5" @click="selectedCategoryId = cat.id">
+                <button v-for="cat in filteredCategories" :key="cat.id" type="button" class="flex flex-col items-center gap-1.5 min-w-0" @click="selectedCategoryId = cat.id">
                     <span class="rounded-full transition" :class="selectedCategoryId === cat.id ? 'ring-2 ring-primary ring-offset-2 ring-offset-surface-50 dark:ring-offset-surface-950' : ''">
                         <CategoryIcon :icon-type="cat.icon_type" :icon-value="cat.icon_value" :icon-url="cat.icon_url" :color="cat.color" :size="52" :icon-size="26" />
                     </span>
-                    <span class="text-xs text-center leading-tight" :class="selectedCategoryId === cat.id ? 'text-primary font-medium' : 'text-surface-600 dark:text-surface-300'">{{ cat.name }}</span>
+                    <span class="w-full text-xs text-center leading-tight break-words hyphens-auto" :class="selectedCategoryId === cat.id ? 'text-primary font-medium' : 'text-surface-600 dark:text-surface-300'">{{ cat.name }}</span>
                 </button>
-                <button type="button" class="flex flex-col items-center gap-1.5" @click="showNewCategory = true">
+                <button type="button" class="flex flex-col items-center gap-1.5 min-w-0" @click="showNewCategory = true">
                     <span class="grid place-items-center h-[52px] w-[52px] rounded-full border-2 border-dashed border-surface-300 dark:border-surface-700 text-surface-400"><IconPlus :size="24" /></span>
-                    <span class="text-xs text-surface-500">Nueva</span>
+                    <span class="w-full text-xs text-center text-surface-500">Nueva</span>
                 </button>
             </div>
 
             <!-- Transferencia: cuentas origen/destino -->
             <div v-else class="max-w-md mx-auto flex items-center gap-2 pt-4">
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                     <label class="text-xs text-surface-500">De</label>
                     <select v-model="selectedAccountId" class="mt-1 w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-900 py-2">
                         <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
                     </select>
                 </div>
                 <IconArrowRight :size="22" class="text-surface-400 mt-5 shrink-0" />
-                <div class="flex-1">
+                <div class="flex-1 min-w-0">
                     <label class="text-xs text-surface-500">A</label>
                     <select v-model="toAccountId" class="mt-1 w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-900 py-2">
                         <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
@@ -249,16 +273,16 @@ const tabClass = (t, activeColor) =>
         <div class="shrink-0 border-t border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900">
             <div class="max-w-md mx-auto">
                 <div class="flex items-center justify-between px-4 pt-3 gap-3">
-                    <select v-if="type !== 'transfer'" v-model="selectedAccountId" class="text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1.5 pr-8 max-w-[45%]">
+                    <select v-if="type !== 'transfer'" v-model="selectedAccountId" class="text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1.5 pr-8 max-w-[45%] min-w-0">
                         <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                     </select>
-                    <span v-else class="text-sm text-surface-500">Monto a transferir</span>
-                    <div class="text-right flex-1">
-                        <div class="text-2xl font-bold tabular-nums">
+                    <span v-else class="text-sm text-surface-500 truncate">Monto a transferir</span>
+                    <div class="text-right flex-1 min-w-0">
+                        <div class="text-xl sm:text-2xl font-bold tabular-nums truncate">
                             <span class="text-surface-400 text-lg mr-1">{{ currencySymbol }}</span>{{ displayAmount }}
                         </div>
-                        <div v-if="hasOperator" class="text-xs text-surface-400">{{ expression }}</div>
-                        <div v-else-if="needsRate" class="text-xs text-surface-400">≈ {{ baseSymbol }} {{ baseConverted }}</div>
+                        <div v-if="hasOperator" class="text-xs text-surface-400 truncate">{{ expression }}</div>
+                        <div v-else-if="needsRate" class="text-xs text-surface-400 truncate">≈ {{ baseSymbol }} {{ baseConverted }}</div>
                     </div>
                 </div>
 

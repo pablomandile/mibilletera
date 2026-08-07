@@ -3,6 +3,7 @@ import { computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
 import { Head, router } from '@inertiajs/vue3';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     range: { type: String, default: 'month' },
@@ -13,8 +14,7 @@ const props = defineProps({
     currencySymbol: { type: String, default: '$' },
 });
 
-const money = (v) =>
-    props.currencySymbol + ' ' + Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const money = (v) => formatMoney(v, props.currencySymbol);
 
 const ranges = [
     { key: 'week', label: 'Semana' },

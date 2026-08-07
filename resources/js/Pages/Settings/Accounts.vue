@@ -5,6 +5,7 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import AccountFormDialog from '@/Components/AccountFormDialog.vue';
 import { Head } from '@inertiajs/vue3';
 import { IconPlus } from '@tabler/icons-vue';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     accounts: { type: Array, default: () => [] },
@@ -16,7 +17,7 @@ const editing = ref(null);
 
 const TYPE_LABELS = { cash: 'Efectivo', bank: 'Banco', card: 'Tarjeta', other: 'Otro' };
 const symbolFor = (code) => props.currencies.find((c) => c.code === code)?.symbol ?? '$';
-const money = (v, code) => symbolFor(code) + ' ' + Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const money = (v, code) => formatMoney(v, symbolFor(code));
 
 const active = computed(() => props.accounts.filter((a) => !a.is_archived));
 const archived = computed(() => props.accounts.filter((a) => a.is_archived));

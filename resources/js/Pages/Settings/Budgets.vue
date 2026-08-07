@@ -4,6 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash } from '@tabler/icons-vue';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
@@ -12,7 +13,7 @@ const props = defineProps({
     periodLabel: { type: String, default: '' },
 });
 
-const money = (v) => props.baseSymbol + ' ' + Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const money = (v) => formatMoney(v, props.baseSymbol);
 
 const pct = (spent, budget) => (budget > 0 ? Math.min(100, Math.round((spent / budget) * 100)) : 0);
 const ratio = (spent, budget) => (budget > 0 ? spent / budget : 0);

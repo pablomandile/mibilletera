@@ -3,6 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown } from '@tabler/icons-vue';
 import { computed } from 'vue';
+import { formatMoney } from '@/money';
 
 const props = defineProps({
     period: { type: Object, required: true },
@@ -12,7 +13,7 @@ const props = defineProps({
     baseSymbol: { type: String, default: '$' },
 });
 
-const money = (v) => props.baseSymbol + ' ' + Number(v).toLocaleString('es-AR', { maximumFractionDigits: 2 });
+const money = (v) => formatMoney(v, props.baseSymbol);
 const goMonth = (m) => router.get(route('reports.index'), { month: m }, { preserveScroll: true });
 
 const delta = (current, prev) => {
