@@ -31,6 +31,26 @@
             })();
         </script>
 
+        {{-- Chrome dispara `beforeinstallprompt` antes de que monte Vue, así que hay que
+             capturarlo acá o el botón de instalar se pierde el evento. --}}
+        <script>
+            (function () {
+                window.__pwaInstall = { prompt: null, installed: false };
+
+                window.addEventListener('beforeinstallprompt', function (e) {
+                    e.preventDefault(); // evita el banner automático: lo disparamos desde el botón
+                    window.__pwaInstall.prompt = e;
+                    window.dispatchEvent(new CustomEvent('pwa:installable'));
+                });
+
+                window.addEventListener('appinstalled', function () {
+                    window.__pwaInstall.prompt = null;
+                    window.__pwaInstall.installed = true;
+                    window.dispatchEvent(new CustomEvent('pwa:installed'));
+                });
+            })();
+        </script>
+
         <!-- Fonts -->
         <link rel="preconnect" href="https://fonts.bunny.net">
         <link href="https://fonts.bunny.net/css?family=figtree:400,500,600&display=swap" rel="stylesheet" />
