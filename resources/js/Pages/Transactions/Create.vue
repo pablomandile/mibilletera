@@ -87,24 +87,46 @@ function evaluate(expr) {
 }
 
 const amount = computed(() => evaluate(expression.value));
-const hasOperator = computed(() => /[+\-×÷]/.test(expression.value.slice(1)));
 
-// Mientras se tipea un número suelto mostramos la cadena tal cual se escribió, para
-// no perder la coma ni los ceros finales ("30000.30" → "30.000,30", no "30.000,3").
-// Con una operación en curso ya no hay "lo tipeado", así que mostramos el resultado.
+const isOperator = (ch) => ['+', '-', '×', '÷'].includes(ch);
+const MAX_DECIMALS = 2;
+
+// La expresión partida en lo acumulado antes del último operador, ese operador y el
+// número que se está tecleando ahora ("25000+5" → head "25000", op "+", segment "5").
+const parts = computed(() => {
+    const expr = expression.value;
+    for (let i = expr.length - 1; i > 0; i--) {
+        if (isOperator(expr[i])) {
+            return { head: expr.slice(0, i), op: expr[i], segment: expr.slice(i + 1) };
+        }
+    }
+    return { head: '', op: '', segment: expr };
+});
+
+// Mientras se tipea un número mostramos la cadena tal cual se escribió, para no
+// perder la coma ni los ceros finales ("30000.30" → "30.000,30", no "30.000,3").
 function formatTyped(raw) {
     if (raw === '') return '0';
     const [int, dec] = raw.split('.');
     return dec === undefined ? formatInteger(int) : `${formatInteger(int)},${dec}`;
 }
+// Un resultado ya calculado, con el mismo formato que lo tecleado (25000 → "25.000").
+const formatResult = (n) => formatTyped(toExpression(n));
 
-const displayAmount = computed(() =>
-    hasOperator.value ? formatAmount(amount.value) : formatTyped(expression.value)
-);
+// El display grande muestra siempre el número en curso: al presionar un operador
+// arranca de nuevo en 0 en vez de seguir mostrando el acumulado.
+const displayAmount = computed(() => formatTyped(parts.value.segment));
+
+// Línea chica: lo acumulado más el operador pendiente ("25.000 +") y, en cuanto se
+// empieza a teclear el segundo número, también el resultado parcial.
+const pendingExpression = computed(() => {
+    const { head, op, segment } = parts.value;
+    if (!op) return '';
+    const left = `${formatResult(evaluate(head))} ${op}`;
+    return segment === '' ? left : `${left} ${formatTyped(segment)} = ${formatResult(amount.value)}`;
+});
+
 const baseConverted = computed(() => formatAmount(amount.value * (Number(exchangeRate.value) || 0)));
-
-const isOperator = (ch) => ['+', '-', '×', '÷'].includes(ch);
-const MAX_DECIMALS = 2;
 
 function press(key) {
     const expr = expression.value;
@@ -114,7 +136,7 @@ function press(key) {
         expression.value = isOperator(last) ? expr.slice(0, -1) + key : expr + key;
         return;
     }
-    const segment = expr.split(/[+\-×÷]/).pop();
+    const segment = parts.value.segment;
     if (key === '.') {
         if (segment.includes('.')) return;
         expression.value = segment === '' ? expr + '0.' : expr + '.';
@@ -281,7 +303,7 @@ const tabClass = (t, activeColor) =>
                         <div class="text-xl sm:text-2xl font-bold tabular-nums truncate">
                             <span class="text-surface-400 text-lg mr-1">{{ currencySymbol }}</span>{{ displayAmount }}
                         </div>
-                        <div v-if="hasOperator" class="text-xs text-surface-400 truncate">{{ expression }}</div>
+                        <div v-if="pendingExpression" class="text-xs text-surface-400 truncate">{{ pendingExpression }}</div>
                         <div v-else-if="needsRate" class="text-xs text-surface-400 truncate">≈ {{ baseSymbol }} {{ baseConverted }}</div>
                     </div>
                 </div>
