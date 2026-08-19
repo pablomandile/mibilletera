@@ -8,6 +8,7 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import CategoryFormDialog from '@/Components/CategoryFormDialog.vue';
 import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { useHaptics } from '@/composables/useHaptics';
 import { formatAmount, formatInteger } from '@/money';
 
 const props = defineProps({
@@ -148,6 +149,18 @@ function press(key) {
     expression.value = expr + key;
 }
 const backspace = () => (expression.value = expression.value.slice(0, -1));
+
+// El teclado vibra solo cuando la tecla cambió algo. Si se ignora (un segundo
+// punto, un tercer decimal, borrar con el monto vacío) no hay respuesta, que es
+// justamente la señal de que no pasó nada.
+const { vibrate } = useHaptics();
+
+function pressKey(k) {
+    const before = expression.value;
+    if (k === 'back') backspace();
+    else press(k);
+    if (expression.value !== before) vibrate(k === 'back' ? 'back' : 'key');
+}
 
 function onPhoto(e) {
     const file = e.target.files?.[0];
@@ -338,7 +351,7 @@ const tabClass = (t, activeColor) =>
                 <!-- Teclado -->
                 <div class="grid grid-cols-4 gap-px bg-surface-200 dark:bg-surface-800 select-none">
                     <template v-for="row in keypad" :key="row.join()">
-                        <button v-for="k in row" :key="k" type="button" class="h-14 text-xl font-medium bg-white dark:bg-surface-900 active:bg-surface-100 dark:active:bg-surface-800" :class="isOperator(k) ? 'text-primary' : 'text-surface-800 dark:text-surface-100'" @click="k === 'back' ? backspace() : press(k)">
+                        <button v-for="k in row" :key="k" type="button" class="h-14 text-xl font-medium bg-white dark:bg-surface-900 active:bg-surface-100 dark:active:bg-surface-800" :class="isOperator(k) ? 'text-primary' : 'text-surface-800 dark:text-surface-100'" @click="pressKey(k)">
                             <IconBackspace v-if="k === 'back'" :size="22" class="mx-auto" />
                             <span v-else>{{ k }}</span>
                         </button>

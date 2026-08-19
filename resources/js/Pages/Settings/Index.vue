@@ -3,11 +3,12 @@ import { ref, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import InstallButton from '@/Components/InstallButton.vue';
 import { useTheme } from '@/composables/useTheme';
+import { useHaptics } from '@/composables/useHaptics';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
-    IconLogout, IconShieldCheck, IconX,
+    IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -21,6 +22,9 @@ const currentCurrency = computed(() => user.value.default_currency ?? 'ARS');
 
 // --- Tema --- (estado compartido con el botón del header)
 const { isDark, toggleTheme } = useTheme();
+
+// --- Vibración del teclado --- (la fila no se muestra si el dispositivo no vibra)
+const { supported: canVibrate, enabled: hapticsOn, toggle: toggleHaptics } = useHaptics();
 
 // --- Moneda ---
 const showCurrency = ref(false);
@@ -98,6 +102,11 @@ const logout = () => router.post(route('logout'));
                         <span class="flex-1 text-sm font-medium text-left">Moneda predeterminada</span>
                         <span class="text-sm text-surface-500">{{ currentCurrency }}</span>
                         <IconChevronRight :size="18" class="text-surface-400" />
+                    </button>
+                    <button v-if="canVibrate" type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors" @click="toggleHaptics">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconDeviceMobileVibration :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 text-sm font-medium text-left">Vibración del teclado</span>
+                        <span class="text-sm text-surface-500">{{ hapticsOn ? 'Activada' : 'Desactivada' }}</span>
                     </button>
                     <button type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors" @click="toggleTheme">
                         <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary">
