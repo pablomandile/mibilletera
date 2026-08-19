@@ -1,15 +1,21 @@
 import { ref } from 'vue';
 
 // La API de vibración existe en Android (Chrome, Firefox, Samsung Internet) y no
-// en iOS: Safari no expone ninguna equivalente, ni en la PWA instalada. Ahí todo
-// esto queda en nada, y por eso la fila de Ajustes se esconde: no tiene sentido
-// ofrecer un interruptor que no hace nada. Pedimos además pantalla táctil para
-// no mostrarlo en la versión de escritorio, donde el navegador acepta la llamada
-// pero no hay motor que vibre.
-const supported =
+// en iOS: Safari no expone ninguna equivalente, ni en la PWA instalada. La fila
+// de Ajustes se muestra igual y avisa "No disponible", porque si no el teclado
+// se queda mudo sin explicación y no hay forma de saber desde el teléfono si el
+// problema es el dispositivo o la preferencia.
+//
+// El chequeo de puntero grueso es para no ofrecerlo en escritorio, donde el
+// navegador acepta la llamada pero no hay motor que vibre. Va con OR porque
+// algunos navegadores Android reportan maxTouchPoints = 0.
+const isTouch =
     typeof navigator !== 'undefined' &&
-    typeof navigator.vibrate === 'function' &&
-    navigator.maxTouchPoints > 0;
+    (navigator.maxTouchPoints > 0 ||
+        (typeof matchMedia === 'function' && matchMedia('(any-pointer: coarse)').matches));
+
+const supported =
+    typeof navigator !== 'undefined' && typeof navigator.vibrate === 'function' && isTouch;
 
 const STORAGE_KEY = 'haptics';
 
@@ -23,10 +29,14 @@ function readPreference() {
 
 const enabled = ref(readPreference());
 
-// Duraciones en ms, cortas a propósito: un teclado que vibra fuerte cansa la mano.
+// Duraciones en ms. Cortas para que no cansen la mano, pero no tanto como para
+// que el motor no llegue a moverse: abajo de ~15 ms muchos teléfonos (sobre todo
+// los de motor rotativo, no los lineales) no alcanzan a producir nada que se
+// sienta, y el teclado parece no vibrar.
 const PATTERNS = {
-    key: 10, // dígito, punto u operador
-    back: 18, // borrar, un poco más marcado
+    key: 20, // dígito, punto u operador
+    back: 35, // borrar, un poco más marcado
+    test: 60, // prueba al prender la opción: tiene que sentirse sin dudas
 };
 
 function vibrate(pattern = 'key') {
@@ -45,7 +55,7 @@ function toggle() {
     } catch (e) {
         /* modo privado: se pierde la preferencia */
     }
-    if (enabled.value) vibrate('back'); // que se sienta al prenderla
+    if (enabled.value) vibrate('test'); // que se sienta sin dudas al prenderla
 }
 
 export function useHaptics() {

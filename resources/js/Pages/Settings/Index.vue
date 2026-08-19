@@ -103,10 +103,13 @@ const logout = () => router.post(route('logout'));
                         <span class="text-sm text-surface-500">{{ currentCurrency }}</span>
                         <IconChevronRight :size="18" class="text-surface-400" />
                     </button>
-                    <button v-if="canVibrate" type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors" @click="toggleHaptics">
+                    <button type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors disabled:opacity-60" :disabled="!canVibrate" @click="toggleHaptics">
                         <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconDeviceMobileVibration :size="20" :stroke="1.8" /></span>
-                        <span class="flex-1 text-sm font-medium text-left">Vibración del teclado</span>
-                        <span class="text-sm text-surface-500">{{ hapticsOn ? 'Activada' : 'Desactivada' }}</span>
+                        <span class="flex-1 min-w-0 text-left">
+                            <span class="block text-sm font-medium">Vibración del teclado</span>
+                            <span v-if="!canVibrate" class="block text-xs text-surface-500">Este dispositivo no expone vibración al navegador</span>
+                        </span>
+                        <span class="text-sm text-surface-500 shrink-0">{{ !canVibrate ? 'No disponible' : (hapticsOn ? 'Activada' : 'Desactivada') }}</span>
                     </button>
                     <button type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors" @click="toggleTheme">
                         <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary">
