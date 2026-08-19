@@ -1,8 +1,8 @@
 <script setup>
-import { ref } from 'vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { IconArrowsExchange, IconTrash } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { useSwipeRow } from '@/composables/useSwipeRow';
 import { formatMoney } from '@/money';
 
 const props = defineProps({
@@ -14,29 +14,14 @@ const emit = defineEmits(['open', 'delete']);
 
 const money = (v, code) => formatMoney(v, props.symbols[code] ?? props.baseSymbol);
 
-// ---- Swipe a la izquierda para borrar ----
-const dx = ref(0);
-const dragging = ref(false);
-let startX = 0;
-let moved = 0;
-
-const onDown = (e) => {
-    dragging.value = true;
-    startX = e.clientX;
-    moved = 0;
-    e.currentTarget.setPointerCapture?.(e.pointerId);
-};
-const onMove = (e) => {
-    if (!dragging.value) return;
-    const d = e.clientX - startX;
-    moved = Math.max(moved, Math.abs(d));
-    dx.value = Math.max(-160, Math.min(0, d)); // solo hacia la izquierda
-};
-const onUp = async () => {
-    if (!dragging.value) return;
-    dragging.value = false;
-
-    if (dx.value <= -80) {
+// ---- Swipe a la izquierda para borrar, toque para abrir la ficha ----
+const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
+    onTap: () => emit('open', props.transaction),
+    onRelease: async (offset) => {
+        if (offset > -80) {
+            dx.value = 0;
+            return;
+        }
         dx.value = -100;
         const ok = await confirmAction({
             title: '¿Eliminar este movimiento?',
@@ -46,13 +31,8 @@ const onUp = async () => {
         });
         if (ok) emit('delete', props.transaction.id);
         else dx.value = 0;
-        return;
-    }
-
-    // Tap (sin desplazamiento real) → abrir ficha
-    if (moved < 6) emit('open', props.transaction);
-    dx.value = 0;
-};
+    },
+});
 </script>
 
 <template>
@@ -65,12 +45,12 @@ const onUp = async () => {
         <!-- Contenido deslizable -->
         <div
             class="relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-900 cursor-pointer select-none touch-pan-y"
-            :class="dragging ? '' : 'transition-transform duration-150'"
+            :class="swiping ? '' : 'transition-transform duration-150'"
             :style="{ transform: `translateX(${dx}px)` }"
             @pointerdown="onDown"
             @pointermove="onMove"
             @pointerup="onUp"
-            @pointercancel="onUp"
+            @pointercancel="onCancel"
         >
             <!-- Transferencia -->
             <template v-if="transaction.type === 'transfer'">

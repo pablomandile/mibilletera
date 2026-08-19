@@ -1,38 +1,26 @@
 <script setup>
 import { ref } from 'vue';
 import { IconTrash, IconBell } from '@tabler/icons-vue';
+import { useSwipeRow } from '@/composables/useSwipeRow';
 
 const props = defineProps({
     alert: { type: Object, required: true },
 });
 const emit = defineEmits(['delete']);
 
-const dx = ref(0);
-const dragging = ref(false);
 const removing = ref(false);
-let startX = 0;
 
-const onDown = (e) => {
-    dragging.value = true;
-    startX = e.clientX;
-    e.target.setPointerCapture?.(e.pointerId);
-};
-const onMove = (e) => {
-    if (!dragging.value) return;
-    const d = e.clientX - startX;
-    dx.value = Math.max(-160, Math.min(0, d)); // solo hacia la izquierda
-};
-const onUp = () => {
-    if (!dragging.value) return;
-    dragging.value = false;
-    if (dx.value < -80) {
+const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
+    onRelease: (offset) => {
+        if (offset > -80) {
+            dx.value = 0;
+            return;
+        }
         removing.value = true;
         dx.value = -400;
         setTimeout(() => emit('delete', props.alert.id), 150);
-    } else {
-        dx.value = 0;
-    }
-};
+    },
+});
 </script>
 
 <template>
@@ -45,12 +33,12 @@ const onUp = () => {
         <!-- Contenido deslizable -->
         <div
             class="relative flex items-start gap-3 bg-white dark:bg-surface-900 px-4 py-3 select-none touch-pan-y"
-            :class="[dragging ? '' : 'transition-transform duration-150', removing ? 'transition-transform duration-150' : '']"
+            :class="swiping && !removing ? '' : 'transition-transform duration-150'"
             :style="{ transform: `translateX(${dx}px)` }"
             @pointerdown="onDown"
             @pointermove="onMove"
             @pointerup="onUp"
-            @pointercancel="onUp"
+            @pointercancel="onCancel"
         >
             <span
                 class="grid place-items-center h-9 w-9 rounded-full shrink-0"
