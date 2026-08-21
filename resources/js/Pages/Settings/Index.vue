@@ -8,7 +8,7 @@ import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
-    IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration,
+    IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -129,6 +129,18 @@ const logout = () => router.post(route('logout'));
                     <Link href="/admin/users" class="flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
                         <span class="grid place-items-center h-9 w-9 rounded-lg bg-primary/10 text-primary"><IconShieldCheck :size="20" :stroke="1.8" /></span>
                         <span class="flex-1 text-sm font-medium">Usuarios y roles</span>
+                        <IconChevronRight :size="18" class="text-surface-400" />
+                    </Link>
+                </div>
+            </div>
+
+            <!-- Información -->
+            <div class="space-y-2">
+                <p class="px-1 text-xs font-medium uppercase tracking-wide text-surface-500">Información</p>
+                <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 overflow-hidden">
+                    <Link href="/about" class="flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconInfoCircle :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 text-sm font-medium">Acerca de</span>
                         <IconChevronRight :size="18" class="text-surface-400" />
                     </Link>
                 </div>

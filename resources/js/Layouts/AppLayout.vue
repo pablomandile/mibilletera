@@ -13,6 +13,7 @@ import {
     IconUser,
     IconPlus,
     IconLogout,
+    IconInfoCircle,
 } from '@tabler/icons-vue';
 
 defineProps({
@@ -86,7 +87,21 @@ watch(
             </nav>
 
             <div class="p-3 border-t border-surface-200 dark:border-surface-800">
-                <div class="flex items-center gap-3 px-2 py-2">
+                <!-- Acerca de va acá y no en navItems: navItems también alimenta la barra
+                     inferior de mobile (2 + botón + 2 en una grilla de 5), y un ítem más
+                     la desarma. En mobile se llega desde Ajustes. -->
+                <Link
+                    href="/about"
+                    class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
+                    :class="isActive('/about')
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-surface-500 dark:text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800'"
+                >
+                    <IconInfoCircle :size="20" :stroke="1.8" />
+                    Acerca de
+                </Link>
+
+                <div class="mt-1 flex items-center gap-3 px-2 py-2">
                     <span class="grid place-items-center h-9 w-9 rounded-full bg-surface-200 dark:bg-surface-700 text-sm font-semibold">
                         {{ (user.name ?? '?').charAt(0).toUpperCase() }}
                     </span>

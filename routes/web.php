@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AboutController;
 use App\Http\Controllers\AccountController;
 use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\BudgetController;
@@ -49,6 +50,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/settings', fn () => Inertia::render('Settings/Index', [
         'currencies' => Currency::orderBy('code')->get(['code', 'name', 'symbol']),
     ]))->name('settings.index');
+
+    Route::get('/about', AboutController::class)->name('about');
 
     Route::patch('/preferences', [PreferencesController::class, 'update'])->name('preferences.update');
 

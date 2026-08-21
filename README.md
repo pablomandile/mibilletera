@@ -20,7 +20,7 @@ Administrador de gastos personales inspirado en la app **Money Manager**. Permit
 - **Presupuestos** por categoría y global, con barra de progreso gasto vs. límite.
 - **Recurrentes**: transacciones automáticas periódicas generadas por un comando programado (con catch-up).
 - **Recordatorios** + **campanita de notificaciones** (badge de no leídos, panel, swipe para borrar).
-- **Ajustes**: perfil, moneda predeterminada, tema claro/oscuro, gestión de categorías y cuentas.
+- **Ajustes**: perfil, moneda predeterminada, tema claro/oscuro, vibración del teclado, gestión de categorías y cuentas, y **Acerca de** (autor y contacto).
 - **Responsive** (sidebar en PC / barra inferior con botón **+** en mobile) + **PWA instalable**.
 
 ---

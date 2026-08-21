@@ -127,7 +127,7 @@ Todas las entidades de usuario cuelgan de `users` (relaciones `hasMany`) y se bo
 ## 6. Frontend
 
 - **Layouts:** `AppLayout.vue` (shell autenticado: sidebar en `md+`, barra inferior con botón **+** grande y redondo en mobile, barra superior con la **campanita**, `Toast` de PrimeVue). `GuestLayout.vue` para pantallas de auth.
-- **Páginas** (`resources/js/Pages`): `Dashboard`, `Charts/Index`, `Reports/Index`, `Transactions/Create`, `Settings/{Index,Accounts,Categories,Budgets,Recurring,Reminders}`, `Admin/Users`, `Profile/Edit`, `Auth/*`.
+- **Páginas** (`resources/js/Pages`): `Dashboard`, `Charts/Index`, `Reports/Index`, `Transactions/Create`, `Settings/{Index,Accounts,Categories,Budgets,Recurring,Reminders}`, `Admin/Users`, `Profile/Edit`, `About`, `Auth/*`.
 - **Componentes propios:** `CategoryIcon` (ícono Tabler o imagen sobre círculo de color), `CategoryFormDialog`, `AccountFormDialog`, `NotificationBell` + `AlertItem` (swipe), `GoogleButton`.
 - **Íconos de categoría:** `tablerIcons.js` mapea claves kebab-case (ej. `shopping-cart`) a componentes Tabler; `resolveIcon()` cae a un ícono genérico si falta.
 - **Formato de moneda:** `Intl.NumberFormat('es-AR')`. La calculadora evalúa expresiones **de izquierda a derecha** (sin precedencia), como Money Manager.
