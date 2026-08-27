@@ -4,7 +4,7 @@
 
 // Subí este número cada vez que cambien los íconos o el manifest: al activarse,
 // el SW borra las caches con otro nombre y así se tiran los archivos viejos.
-const CACHE = 'mibilletera-v2';
+const CACHE = 'mibilletera-v3';
 // Los íconos no se precachean: se guardan solos la primera vez que se piden y
 // así no hay que mantener la versión de su URL en dos lugares.
 const PRECACHE = ['/manifest.webmanifest'];
@@ -58,6 +58,39 @@ self.addEventListener('fetch', (event) => {
     event.respondWith(
         fetch(request)
             .then((resp) => {
+                // Respuesta armada para un XHR de Inertia: es el JSON de una
+                // página, no un documento. No se guarda nunca en Cache Storage,
+                // porque el CDN borra el `Vary: X-Inertia` y entonces quedaría
+                // bajo la misma clave que el HTML de esa URL.
+                if (resp.headers.get('x-inertia')) {
+                    // Y si además llegó como respuesta a una navegación de verdad
+                    // (restaurar una pestaña descartada, el botón "atrás"), salió
+                    // de la caché HTTP del navegador envenenada de antes del
+                    // parche del middleware: el usuario vería el JSON crudo.
+                    // Se pide el HTML de nuevo, saltando esa caché.
+                    //
+                    // El guard de `mode` no sobra: el router de Inertia manda
+                    // `Accept: text/html` en sus XHR, así que sin él esta rama
+                    // les devolvería el HTML de arranque y la app dejaría de
+                    // navegar.
+                    if (request.mode === 'navigate') {
+                        return fetch(request.url, {
+                            cache: 'reload',
+                            headers: { Accept: 'text/html' },
+                        }).then((recuperada) =>
+                            // Si la sesión venció, esa URL redirige al login. Una
+                            // respuesta ya redirigida no se le puede entregar a
+                            // una navegación, así que se le pasa el redirect y lo
+                            // sigue el navegador.
+                            recuperada.redirected
+                                ? Response.redirect(recuperada.url, 302)
+                                : recuperada
+                        );
+                    }
+
+                    return resp;
+                }
+
                 const copy = resp.clone();
                 caches.open(CACHE).then((cache) => cache.put(request, copy));
                 return resp;
