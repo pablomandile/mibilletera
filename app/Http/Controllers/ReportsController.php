@@ -20,7 +20,7 @@ class ReportsController extends Controller
             ? Carbon::createFromFormat('Y-m', $month)->startOfMonth()
             : now()->startOfMonth();
 
-        $base = fn ($t) => $t->amount * $t->exchange_rate;
+        $base = fn ($t) => $t->base_amount;
 
         $current = $this->periodTotals($user, $date, $base);
         $previous = $this->periodTotals($user, $date->copy()->subMonth(), $base);

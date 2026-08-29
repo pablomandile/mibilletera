@@ -47,4 +47,11 @@ class Transaction extends Model
     {
         return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
     }
+
+    // Importe convertido a la moneda base del usuario. Fuera de $appends: es para
+    // sumar en PHP, no para serializar.
+    public function getBaseAmountAttribute(): float
+    {
+        return (float) $this->amount * (float) $this->exchange_rate;
+    }
 }

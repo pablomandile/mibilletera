@@ -160,4 +160,80 @@ class TransactionFlowTest extends TestCase
         $this->actingAs($user)->get('/dashboard?type=cualquiera')
             ->assertInertia(fn (Assert $page) => $page->where('filter', null)->has('transactions', 2));
     }
+
+    public function test_dashboard_sends_day_totals_converted_to_base_currency(): void
+    {
+        $user = User::factory()->create();
+        $account = $user->accounts()->first();
+        $usd = $user->accounts()->create([
+            'name' => 'USD', 'type' => 'bank', 'currency_code' => 'USD', 'initial_balance' => 0,
+        ]);
+        $expenseCat = $user->categories()->where('type', 'expense')->first();
+        $incomeCat = $user->categories()->where('type', 'income')->first();
+
+        $dayA = now()->startOfMonth();
+        $dayB = now()->startOfMonth()->addDay();
+
+        // Día A: 15.000 ARS + 100 USD a 1000 => 115.000 en moneda base.
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $expenseCat->id, 'type' => 'expense',
+            'amount' => 15000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => $dayA,
+        ]);
+        $user->transactions()->create([
+            'account_id' => $usd->id, 'category_id' => $expenseCat->id, 'type' => 'expense',
+            'amount' => 100, 'currency_code' => 'USD', 'exchange_rate' => 1000, 'transaction_date' => $dayA,
+        ]);
+        // La transferencia del día A no debe sumar a ningún lado.
+        $user->transactions()->create([
+            'account_id' => $account->id, 'to_account_id' => $usd->id, 'type' => 'transfer',
+            'amount' => 7000, 'transfer_amount' => 7, 'currency_code' => 'ARS', 'transfer_currency' => 'USD',
+            'exchange_rate' => 1, 'transaction_date' => $dayA,
+        ]);
+        // Día B: solo un ingreso.
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $incomeCat->id, 'type' => 'income',
+            'amount' => 90000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => $dayB,
+        ]);
+
+        $keyA = $dayA->format('Y-m-d');
+        $keyB = $dayB->format('Y-m-d');
+
+        $this->actingAs($user)->get('/dashboard')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('dayTotals', 2)
+                ->where("dayTotals.{$keyA}.expense", fn ($v) => (float) $v === 115000.0)
+                ->where("dayTotals.{$keyA}.income", fn ($v) => (float) $v === 0.0)
+                ->where("dayTotals.{$keyB}.expense", fn ($v) => (float) $v === 0.0)
+                ->where("dayTotals.{$keyB}.income", fn ($v) => (float) $v === 90000.0)
+            );
+    }
+
+    public function test_day_totals_ignore_the_list_filter(): void
+    {
+        $user = User::factory()->create();
+        $account = $user->accounts()->first();
+        $expenseCat = $user->categories()->where('type', 'expense')->first();
+        $incomeCat = $user->categories()->where('type', 'income')->first();
+
+        $day = now()->startOfMonth();
+
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $expenseCat->id, 'type' => 'expense',
+            'amount' => 15000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => $day,
+        ]);
+        $user->transactions()->create([
+            'account_id' => $account->id, 'category_id' => $incomeCat->id, 'type' => 'income',
+            'amount' => 90000, 'currency_code' => 'ARS', 'exchange_rate' => 1, 'transaction_date' => $day,
+        ]);
+
+        $key = $day->format('Y-m-d');
+
+        // El filtro achica el listado, pero el separador sigue mostrando el día completo.
+        $this->actingAs($user)->get('/dashboard?type=expense')
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('transactions', 1)
+                ->where("dayTotals.{$key}.expense", fn ($v) => (float) $v === 15000.0)
+                ->where("dayTotals.{$key}.income", fn ($v) => (float) $v === 90000.0)
+            );
+    }
 }

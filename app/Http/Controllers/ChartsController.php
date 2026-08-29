@@ -34,7 +34,7 @@ class ChartsController extends Controller
         $expenses = $transactions->where('type', 'expense');
         $incomes = $transactions->where('type', 'income');
 
-        $base = fn ($t) => $t->amount * $t->exchange_rate;
+        $base = fn ($t) => $t->base_amount;
 
         // Torta: gasto por categoría (convertido a moneda base)
         $byCategory = $expenses

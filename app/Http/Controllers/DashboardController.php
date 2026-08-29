@@ -41,8 +41,17 @@ class DashboardController extends Controller
             ->get();
 
         // Totales convertidos a la moneda base (amount * exchange_rate).
-        $income = (float) $transactions->where('type', 'income')->sum(fn ($t) => $t->amount * $t->exchange_rate);
-        $expense = (float) $transactions->where('type', 'expense')->sum(fn ($t) => $t->amount * $t->exchange_rate);
+        $income = (float) $transactions->where('type', 'income')->sum(fn ($t) => $t->base_amount);
+        $expense = (float) $transactions->where('type', 'expense')->sum(fn ($t) => $t->base_amount);
+
+        // Subtotales del separador de cada día. Se calculan sobre la colección sin
+        // filtrar: igual que los totales del mes, el filtro del listado no los toca.
+        $dayTotals = $transactions
+            ->groupBy(fn ($t) => $t->transaction_date->format('Y-m-d'))
+            ->map(fn ($ofDay) => [
+                'income' => (float) $ofDay->where('type', 'income')->sum(fn ($t) => $t->base_amount),
+                'expense' => (float) $ofDay->where('type', 'expense')->sum(fn ($t) => $t->base_amount),
+            ]);
 
         $symbols = Currency::pluck('symbol', 'code');
 
@@ -82,6 +91,7 @@ class DashboardController extends Controller
                 'expense' => $expense,
                 'balance' => $income - $expense,
             ],
+            'dayTotals' => $dayTotals,
             'filter' => $filter,
             'baseSymbol' => $symbols[$user->default_currency] ?? '$',
             'symbols' => $symbols,
