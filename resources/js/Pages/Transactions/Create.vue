@@ -336,7 +336,7 @@ const tabClass = (t, activeColor) =>
 
                 <!-- Nota + foto + fecha -->
                 <div class="flex items-center gap-2 px-4 py-2">
-                    <input v-model="note" type="text" placeholder="Nota…" class="flex-1 text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1.5" />
+                    <input v-model="note" type="text" placeholder="Nota…" class="flex-1 min-w-0 text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1.5" />
                     <label v-if="type !== 'transfer'" class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-surface-500 cursor-pointer shrink-0 overflow-hidden">
                         <img v-if="photoPreview" :src="photoPreview" class="h-full w-full object-cover" alt="" />
                         <IconPhoto v-else :size="20" />

@@ -125,7 +125,7 @@ watch(
         <div class="md:pl-64">
             <!-- Top bar (mobile) -->
             <header
-                class="md:hidden sticky top-0 z-20 flex items-center gap-2 h-14 px-4 border-b border-surface-200 dark:border-surface-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur"
+                class="font-scale-capped md:hidden sticky top-0 z-20 flex items-center gap-2 h-14 px-4 border-b border-surface-200 dark:border-surface-800 bg-white/80 dark:bg-surface-900/80 backdrop-blur"
             >
                 <Link href="/dashboard" class="shrink-0" aria-label="Inicio">
                     <img src="/icons/mibilletera-logo.png" alt="Mi Billetera" class="h-8 w-auto" />

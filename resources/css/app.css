@@ -20,10 +20,18 @@ body {
    antes del primer paint. Escala solo el texto: las clases text-* de Tailwind se
    multiplican por esta variable (ver tailwind.config.js). */
 :root {
-    --font-scale: 1.0625; /* normal: 17px de base en vez de 16 */
+    --font-scale: 1.1875; /* normal: 19px de base */
+}
+:root[data-font-size='small'] {
+    --font-scale: 1.0625; /* pequeña: 17px */
 }
 :root[data-font-size='large'] {
-    --font-scale: 1.1875; /* grande: 19px de base */
+    --font-scale: 1.3125; /* grande: 21px */
+}
+/* Barras de alto fijo (la superior en mobile): en "Grande" se quedan en el
+   tamaño normal, porque si el título baja de línea se sale de la barra. */
+:root[data-font-size='large'] .font-scale-capped {
+    --font-scale: 1.1875;
 }
 body {
     font-size: calc(1rem * var(--font-scale));

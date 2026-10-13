@@ -33,8 +33,9 @@
                     document.documentElement.classList.add('dark');
                 }
                 try {
-                    if (localStorage.getItem('fontSize') === 'large') {
-                        document.documentElement.dataset.fontSize = 'large';
+                    var f = localStorage.getItem('fontSize');
+                    if (f === 'small' || f === 'large') {
+                        document.documentElement.dataset.fontSize = f;
                     }
                 } catch (e) {
                     /* modo privado: queda el tamaño normal */
