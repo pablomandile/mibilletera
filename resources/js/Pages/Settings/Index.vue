@@ -4,11 +4,12 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import InstallButton from '@/Components/InstallButton.vue';
 import { useTheme } from '@/composables/useTheme';
 import { useHaptics } from '@/composables/useHaptics';
+import { useFontSize } from '@/composables/useFontSize';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
-    IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle,
+    IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle, IconTextSize,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -22,6 +23,9 @@ const currentCurrency = computed(() => user.value.default_currency ?? 'ARS');
 
 // --- Tema --- (estado compartido con el botón del header)
 const { isDark, toggleTheme } = useTheme();
+
+// --- Tamaño de letra ---
+const { isLarge: largeText, toggleFontSize } = useFontSize();
 
 // --- Vibración del teclado --- (la fila no se muestra si el dispositivo no vibra)
 const { supported: canVibrate, enabled: hapticsOn, toggle: toggleHaptics } = useHaptics();
@@ -66,8 +70,8 @@ const logout = () => router.post(route('logout'));
                     <template v-else>{{ (user.name ?? '?').charAt(0).toUpperCase() }}</template>
                 </span>
                 <div class="min-w-0">
-                    <p class="font-semibold truncate">{{ user.name }}</p>
-                    <p class="text-sm text-surface-500 truncate">{{ user.email }}</p>
+                    <p class="font-semibold break-words hyphens-auto">{{ user.name }}</p>
+                    <p class="text-sm text-surface-500 break-all">{{ user.email }}</p>
                 </div>
             </div>
 
@@ -118,6 +122,11 @@ const logout = () => router.post(route('logout'));
                         </span>
                         <span class="flex-1 text-sm font-medium text-left">Tema {{ isDark ? 'oscuro' : 'claro' }}</span>
                         <span class="text-xs text-surface-500">Cambiar</span>
+                    </button>
+                    <button type="button" class="w-full flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors" :aria-pressed="largeText" @click="toggleFontSize">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconTextSize :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 min-w-0 text-sm font-medium text-left">Tamaño de letra</span>
+                        <span class="text-sm text-surface-500 shrink-0">{{ largeText ? 'Grande' : 'Normal' }}</span>
                     </button>
                 </div>
             </div>

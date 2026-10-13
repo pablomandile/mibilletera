@@ -41,10 +41,10 @@ const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };
                 >
                     <CategoryIcon :icon-value="acc.icon" :color="acc.color" :size="44" :icon-size="24" />
                     <div class="min-w-0 flex-1">
-                        <p class="font-medium truncate">{{ acc.name }}</p>
+                        <p class="font-medium break-words hyphens-auto">{{ acc.name }}</p>
                         <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}</p>
                     </div>
-                    <span class="font-semibold tabular-nums" :class="acc.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
+                    <span class="shrink-0 whitespace-nowrap font-semibold tabular-nums" :class="acc.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
                         {{ money(acc.balance, acc.currency_code) }}
                     </span>
                 </button>
@@ -69,10 +69,10 @@ const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };
                 >
                     <CategoryIcon :icon-value="acc.icon" :color="acc.color" :size="40" :icon-size="22" />
                     <div class="min-w-0 flex-1">
-                        <p class="font-medium truncate">{{ acc.name }}</p>
+                        <p class="font-medium break-words hyphens-auto">{{ acc.name }}</p>
                         <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}</p>
                     </div>
-                    <span class="text-sm tabular-nums text-surface-500">{{ money(acc.balance, acc.currency_code) }}</span>
+                    <span class="shrink-0 whitespace-nowrap text-sm tabular-nums text-surface-500">{{ money(acc.balance, acc.currency_code) }}</span>
                 </button>
             </div>
         </div>

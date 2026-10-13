@@ -47,9 +47,9 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                 <IconBell :size="18" />
             </span>
             <div class="min-w-0 flex-1">
-                <p class="text-sm font-medium truncate" :class="alert.read ? 'text-surface-500' : ''">{{ alert.title }}</p>
-                <p v-if="alert.body" class="text-xs text-surface-500 truncate">{{ alert.body }}</p>
-                <p class="text-[11px] text-surface-400 mt-0.5">{{ alert.time_ago }}</p>
+                <p class="text-sm font-medium break-words hyphens-auto" :class="alert.read ? 'text-surface-500' : ''">{{ alert.title }}</p>
+                <p v-if="alert.body" class="text-xs text-surface-500 break-words hyphens-auto">{{ alert.body }}</p>
+                <p class="text-2xs text-surface-400 mt-0.5">{{ alert.time_ago }}</p>
             </div>
             <span v-if="!alert.read" class="mt-1.5 h-2 w-2 rounded-full bg-primary shrink-0"></span>
         </div>

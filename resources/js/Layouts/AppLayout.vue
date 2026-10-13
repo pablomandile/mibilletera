@@ -106,8 +106,8 @@ watch(
                         {{ (user.name ?? '?').charAt(0).toUpperCase() }}
                     </span>
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium truncate">{{ user.name }}</p>
-                        <p class="text-xs text-surface-500 truncate">{{ user.email }}</p>
+                        <p class="text-sm font-medium break-words hyphens-auto">{{ user.name }}</p>
+                        <p class="text-xs text-surface-500 break-all">{{ user.email }}</p>
                     </div>
                     <button
                         type="button"

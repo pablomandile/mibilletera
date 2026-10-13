@@ -37,7 +37,7 @@ const newSub = (parent) => { dialogCategory.value = null; dialogParentId.value =
                 <div v-for="c in list" :key="c.id" class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 overflow-hidden">
                     <div class="flex items-center gap-3 px-4 py-3">
                         <CategoryIcon :icon-type="c.icon_type" :icon-value="c.icon_value" :icon-url="c.icon_url" :color="c.color" :size="42" :icon-size="22" />
-                        <span class="flex-1 font-medium truncate">{{ c.name }}</span>
+                        <span class="flex-1 min-w-0 font-medium break-words hyphens-auto">{{ c.name }}</span>
                         <button type="button" class="grid place-items-center h-8 w-8 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800" title="Subcategoría" @click="newSub(c)"><IconCornerDownRight :size="18" /></button>
                         <button type="button" class="grid place-items-center h-8 w-8 rounded-lg text-surface-400 hover:bg-surface-100 dark:hover:bg-surface-800" title="Editar" @click="editCategory(c)"><IconPencil :size="18" /></button>
                     </div>
@@ -46,7 +46,7 @@ const newSub = (parent) => { dialogCategory.value = null; dialogParentId.value =
                     <div v-if="c.children && c.children.length" class="border-t border-surface-100 dark:border-surface-800 divide-y divide-surface-100 dark:divide-surface-800 bg-surface-50/40 dark:bg-surface-800/20">
                         <button v-for="sub in c.children" :key="sub.id" type="button" class="w-full flex items-center gap-3 pl-8 pr-4 py-2.5 text-left hover:bg-surface-100 dark:hover:bg-surface-800" @click="editCategory(sub)">
                             <CategoryIcon :icon-type="sub.icon_type" :icon-value="sub.icon_value" :icon-url="sub.icon_url" :color="sub.color" :size="30" :icon-size="16" />
-                            <span class="flex-1 text-sm truncate">{{ sub.name }}</span>
+                            <span class="flex-1 min-w-0 text-sm break-words hyphens-auto">{{ sub.name }}</span>
                             <IconPencil :size="16" class="text-surface-400" />
                         </button>
                     </div>

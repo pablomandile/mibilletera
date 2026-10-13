@@ -67,7 +67,7 @@ const toggleEnabled = (r) => {
                     :class="!r.enabled ? 'opacity-60' : ''">
                     <span class="grid place-items-center h-11 w-11 rounded-full bg-primary/10 text-primary shrink-0"><IconBell :size="22" /></span>
                     <button type="button" class="min-w-0 flex-1 text-left" @click="openEdit(r)">
-                        <p class="font-medium truncate">{{ r.title }}</p>
+                        <p class="font-medium break-words hyphens-auto">{{ r.title }}</p>
                         <p class="text-xs text-surface-500">{{ r.time }} · {{ daysLabel(r.days) }}</p>
                     </button>
                     <label class="relative inline-flex items-center cursor-pointer shrink-0">

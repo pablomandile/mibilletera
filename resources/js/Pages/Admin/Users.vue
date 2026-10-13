@@ -41,11 +41,11 @@ const changeRole = (user, role) => {
                     </span>
 
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-medium truncate">
+                        <p class="text-sm font-medium break-words hyphens-auto">
                             {{ u.name }}
                             <span v-if="u.is_self" class="ml-1 text-xs text-primary">(vos)</span>
                         </p>
-                        <p class="text-xs text-surface-500 truncate">{{ u.email }} · {{ u.created_at }}</p>
+                        <p class="text-xs text-surface-500 break-words hyphens-auto">{{ u.email }} · {{ u.created_at }}</p>
                     </div>
 
                     <select

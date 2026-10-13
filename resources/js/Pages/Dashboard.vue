@@ -5,7 +5,7 @@ import TransactionRow from '@/Components/TransactionRow.vue';
 import TransactionDetail from '@/Components/TransactionDetail.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { IconChevronLeft, IconChevronRight, IconX } from '@tabler/icons-vue';
-import { formatMoney } from '@/money';
+import { formatMoney, formatMoneyWrappable } from '@/money';
 
 const props = defineProps({
     transactions: { type: Array, default: () => [] },
@@ -18,6 +18,7 @@ const props = defineProps({
 });
 
 const moneyBase = (v) => formatMoney(v, props.baseSymbol);
+const moneyTotal = (v) => formatMoneyWrappable(v, props.baseSymbol);
 
 const visit = (params) => router.get(route('dashboard'), params, { preserveScroll: true });
 
@@ -104,7 +105,7 @@ const deleteTransaction = (id) => {
                     @click="toggleFilter('income')"
                 >
                     <p class="text-xs text-surface-500">Ingresos</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold text-emerald-500 truncate">{{ moneyBase(totals.income) }}</p>
+                    <p class="mt-1 text-sm md:text-lg font-semibold text-emerald-500 break-words hyphens-auto">{{ moneyTotal(totals.income) }}</p>
                 </button>
                 <button
                     type="button"
@@ -114,12 +115,12 @@ const deleteTransaction = (id) => {
                     @click="toggleFilter('expense')"
                 >
                     <p class="text-xs text-surface-500">Gastos</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 truncate">{{ moneyBase(totals.expense) }}</p>
+                    <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(totals.expense) }}</p>
                 </button>
                 <div class="min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
                     <p class="text-xs text-surface-500">Balance</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold truncate" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
-                        {{ moneyBase(totals.balance) }}
+                    <p class="mt-1 text-sm md:text-lg font-semibold break-words hyphens-auto" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
+                        {{ moneyTotal(totals.balance) }}
                     </p>
                 </div>
             </div>
@@ -147,7 +148,7 @@ const deleteTransaction = (id) => {
 
             <div v-for="group in groups" :key="group.date" class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 overflow-hidden">
                 <!-- Separador del día: fecha a la izquierda, subtotales a la derecha. -->
-                <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2 border-b border-surface-100 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-800/30 text-[11px] text-surface-500">
+                <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 px-4 py-2 border-b border-surface-100 dark:border-surface-800 bg-surface-50/50 dark:bg-surface-800/30 text-2xs text-surface-500">
                     <span class="flex items-center gap-2 shrink-0 whitespace-nowrap">
                         <span class="font-medium text-surface-600 dark:text-surface-400">{{ group.day }}</span>
                         <span v-if="group.weekday">{{ group.weekday }}</span>

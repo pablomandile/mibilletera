@@ -16,6 +16,19 @@ body {
     -webkit-tap-highlight-color: transparent;
 }
 
+/* Tamaño de letra (Ajustes → Tamaño de letra). Lo aplica el script del <head>
+   antes del primer paint. Escala solo el texto: las clases text-* de Tailwind se
+   multiplican por esta variable (ver tailwind.config.js). */
+:root {
+    --font-scale: 1.0625; /* normal: 17px de base en vez de 16 */
+}
+:root[data-font-size='large'] {
+    --font-scale: 1.1875; /* grande: 19px de base */
+}
+body {
+    font-size: calc(1rem * var(--font-scale));
+}
+
 /* Oculta la scrollbar en carruseles horizontales (selector de período, etc.) */
 .no-scrollbar {
     -ms-overflow-style: none;

@@ -3,7 +3,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
 import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown } from '@tabler/icons-vue';
 import { computed } from 'vue';
-import { formatMoney } from '@/money';
+import { formatMoney, formatMoneyWrappable } from '@/money';
 
 const props = defineProps({
     period: { type: Object, required: true },
@@ -14,6 +14,7 @@ const props = defineProps({
 });
 
 const money = (v) => formatMoney(v, props.baseSymbol);
+const moneyTotal = (v) => formatMoneyWrappable(v, props.baseSymbol);
 const goMonth = (m) => router.get(route('reports.index'), { month: m }, { preserveScroll: true });
 
 const delta = (current, prev) => {
@@ -46,21 +47,21 @@ const incomeDelta = computed(() => delta(props.totals.income, props.totals.prevI
                 <div class="grid grid-cols-3 gap-3 text-center">
                     <div>
                         <p class="text-xs text-surface-500">Ingresos</p>
-                        <p class="mt-1 font-semibold text-emerald-500 truncate">{{ money(totals.income) }}</p>
-                        <p v-if="incomeDelta !== null" class="text-[11px] mt-0.5" :class="incomeDelta >= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                        <p class="mt-1 font-semibold text-emerald-500 break-words hyphens-auto">{{ moneyTotal(totals.income) }}</p>
+                        <p v-if="incomeDelta !== null" class="text-2xs mt-0.5" :class="incomeDelta >= 0 ? 'text-emerald-500' : 'text-rose-500'">
                             {{ incomeDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(incomeDelta) }}%
                         </p>
                     </div>
                     <div>
                         <p class="text-xs text-surface-500">Gastos</p>
-                        <p class="mt-1 font-semibold text-rose-500 truncate">{{ money(totals.expense) }}</p>
-                        <p v-if="expenseDelta !== null" class="text-[11px] mt-0.5" :class="expenseDelta <= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                        <p class="mt-1 font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(totals.expense) }}</p>
+                        <p v-if="expenseDelta !== null" class="text-2xs mt-0.5" :class="expenseDelta <= 0 ? 'text-emerald-500' : 'text-rose-500'">
                             {{ expenseDelta >= 0 ? '▲' : '▼' }} {{ Math.abs(expenseDelta) }}%
                         </p>
                     </div>
                     <div>
                         <p class="text-xs text-surface-500">Balance</p>
-                        <p class="mt-1 font-semibold truncate" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">{{ money(totals.balance) }}</p>
+                        <p class="mt-1 font-semibold break-words hyphens-auto" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">{{ moneyTotal(totals.balance) }}</p>
                     </div>
                 </div>
             </div>

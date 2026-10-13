@@ -19,7 +19,7 @@
 
         <title inertia>{{ config('app.name', 'Mi Billetera') }}</title>
 
-        {{-- Aplica el tema (oscuro por defecto) antes del primer paint para evitar el parpadeo --}}
+        {{-- Aplica el tema (oscuro por defecto) y el tamaño de letra antes del primer paint para evitar el parpadeo --}}
         <script>
             (function () {
                 try {
@@ -31,6 +31,13 @@
                     }
                 } catch (e) {
                     document.documentElement.classList.add('dark');
+                }
+                try {
+                    if (localStorage.getItem('fontSize') === 'large') {
+                        document.documentElement.dataset.fontSize = 'large';
+                    }
+                } catch (e) {
+                    /* modo privado: queda el tamaño normal */
                 }
             })();
         </script>

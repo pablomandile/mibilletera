@@ -58,10 +58,10 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                     <IconArrowsExchange :size="22" />
                 </span>
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium truncate">Transferencia</p>
-                    <p class="text-xs text-surface-500 truncate">{{ transaction.from_account }} → {{ transaction.to_account }}</p>
+                    <p class="text-sm font-medium break-words hyphens-auto">Transferencia</p>
+                    <p class="text-xs text-surface-500 break-words hyphens-auto">{{ transaction.from_account }} → {{ transaction.to_account }}</p>
                 </div>
-                <span class="text-sm font-semibold tabular-nums text-surface-500">{{ money(transaction.amount, transaction.currency_code) }}</span>
+                <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-surface-500">{{ money(transaction.amount, transaction.currency_code) }}</span>
             </template>
 
             <!-- Gasto / ingreso -->
@@ -75,10 +75,10 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                     :icon-size="22"
                 />
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium truncate">{{ transaction.category?.name ?? 'Sin categoría' }}</p>
-                    <p v-if="transaction.note" class="text-xs text-surface-500 truncate">{{ transaction.note }}</p>
+                    <p class="text-sm font-medium break-words hyphens-auto">{{ transaction.category?.name ?? 'Sin categoría' }}</p>
+                    <p v-if="transaction.note" class="text-xs text-surface-500 break-words hyphens-auto">{{ transaction.note }}</p>
                 </div>
-                <span class="text-sm font-semibold tabular-nums" :class="transaction.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
+                <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" :class="transaction.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
                     {{ transaction.type === 'income' ? '+' : '-' }}{{ money(transaction.amount, transaction.currency_code) }}
                 </span>
             </template>

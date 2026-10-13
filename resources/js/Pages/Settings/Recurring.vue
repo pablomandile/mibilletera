@@ -101,10 +101,10 @@ const remove = async () => {
                     @click="openEdit(r)">
                     <CategoryIcon :icon-type="r.category?.icon_type ?? 'preset'" :icon-value="r.category?.icon_value ?? 'category'" :icon-url="r.category?.icon_url" :color="r.category?.color ?? '#9ca3af'" :size="42" :icon-size="22" />
                     <div class="min-w-0 flex-1">
-                        <p class="font-medium truncate">{{ r.category?.name ?? 'Sin categoría' }}</p>
+                        <p class="font-medium break-words hyphens-auto">{{ r.category?.name ?? 'Sin categoría' }}</p>
                         <p class="text-xs text-surface-500">{{ freqLabel(r.frequency, r.interval) }} · próx. {{ r.next_run_date }}<span v-if="!r.is_active"> · pausada</span></p>
                     </div>
-                    <span class="text-sm font-semibold tabular-nums" :class="r.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
+                    <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" :class="r.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
                         {{ r.type === 'income' ? '+' : '-' }}{{ money(r.amount, r.currency_code) }}
                     </span>
                 </button>

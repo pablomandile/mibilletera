@@ -121,16 +121,16 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
                     <span class="text-sm font-semibold text-rose-500">{{ money(totalExpense) }}</span>
                 </div>
 
-                <div v-if="hasExpenses" class="grid sm:grid-cols-2 gap-4 items-center">
+                <div v-if="hasExpenses" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                     <div class="relative h-56">
                         <Chart type="doughnut" :data="doughnutData" :options="doughnutOptions" class="h-56" />
                     </div>
                     <div class="space-y-2 max-h-56 overflow-y-auto">
                         <div v-for="c in withPct" :key="c.name" class="flex items-center gap-2 text-sm">
                             <span class="h-3 w-3 rounded-full shrink-0" :style="{ backgroundColor: c.color }"></span>
-                            <span class="flex-1 truncate">{{ c.name }}</span>
-                            <span class="text-surface-500">{{ c.pct }}%</span>
-                            <span class="font-medium tabular-nums w-24 text-right">{{ money(c.total) }}</span>
+                            <span class="flex-1 min-w-0 break-words hyphens-auto">{{ c.name }}</span>
+                            <span class="shrink-0 text-surface-500">{{ c.pct }}%</span>
+                            <span class="shrink-0 whitespace-nowrap font-medium tabular-nums min-w-24 text-right">{{ money(c.total) }}</span>
                         </div>
                     </div>
                 </div>
