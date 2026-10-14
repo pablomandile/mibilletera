@@ -121,7 +121,7 @@ const editTransaction = (row) => openTransactionEdit(row, page.version);
             <div class="grid grid-cols-3 gap-3">
                 <button
                     type="button"
-                    class="text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
+                    class="piggy-single text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
                     :class="filter === 'income' ? 'border-emerald-500 ring-1 ring-emerald-500' : 'border-surface-200 dark:border-surface-800 hover:border-emerald-500/50'"
                     :aria-pressed="filter === 'income'"
                     @click="toggleFilter('income')"
@@ -131,7 +131,7 @@ const editTransaction = (row) => openTransactionEdit(row, page.version);
                 </button>
                 <button
                     type="button"
-                    class="text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
+                    class="piggy-single text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
                     :class="filter === 'expense' ? 'border-rose-500 ring-1 ring-rose-500' : 'border-surface-200 dark:border-surface-800 hover:border-rose-500/50'"
                     :aria-pressed="filter === 'expense'"
                     @click="toggleFilter('expense')"
@@ -139,7 +139,7 @@ const editTransaction = (row) => openTransactionEdit(row, page.version);
                     <p class="text-xs text-surface-500">Gastos</p>
                     <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(shown.totals.expense) }}</p>
                 </button>
-                <div class="min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
+                <div class="piggy-single min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
                     <p class="text-xs text-surface-500">Balance</p>
                     <p class="mt-1 text-sm md:text-lg font-semibold break-words hyphens-auto" :class="shown.totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
                         {{ moneyTotal(shown.totals.balance) }}

@@ -37,15 +37,16 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
 
 <template>
     <div class="relative overflow-hidden">
-        <!-- Fondo de borrado -->
-        <div class="absolute inset-0 flex items-center justify-end bg-rose-500 pr-5 text-white">
+        <!-- Fondo de borrado. Solo existe mientras la fila está corrida: en reposo
+             la fila es transparente y deja ver los chanchitos de la tarjeta. -->
+        <div v-if="dx !== 0" class="absolute inset-0 flex items-center justify-end bg-rose-500 pr-5 text-white">
             <IconTrash :size="20" />
         </div>
 
         <!-- Contenido deslizable -->
         <div
-            class="piggy-surface relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-900 cursor-pointer select-none touch-pan-y"
-            :class="swiping ? '' : 'transition-transform duration-150'"
+            class="relative flex items-center gap-3 px-4 py-3 cursor-pointer select-none touch-pan-y"
+            :class="[swiping ? '' : 'transition-transform duration-150', dx !== 0 ? 'bg-white dark:bg-surface-900' : '']"
             :style="{ transform: `translateX(${dx}px)` }"
             @pointerdown="onDown"
             @pointermove="onMove"
