@@ -4,6 +4,8 @@ import { useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
@@ -54,19 +56,31 @@ watch(
 
 const close = () => emit('update:modelValue', false);
 
-const submit = () => {
+const submit = async () => {
+    const id = props.account?.id;
+    const data = { ...form.data(), initial_balance: Number(form.initial_balance) };
     const opts = { preserveScroll: true, onSuccess: () => close() };
-    if (isEdit.value) {
-        form.patch(route('accounts.update', props.account.id), opts);
-    } else {
-        form.post(route('accounts.store'), opts);
-    }
+
+    const result = await mutate(
+        { entity: 'account', action: isEdit.value ? 'update' : 'create', id, temp_id: isEdit.value ? null : newTempId(), data, view: data },
+        (extra) =>
+            isEdit.value
+                ? form.patch(route('accounts.update', id), { ...opts, ...extra })
+                : form.post(route('accounts.store'), { ...opts, ...extra })
+    );
+    if (result === 'queued') close();
 };
 
 const remove = async () => {
     const ok = await confirmAction({ title: '¿Eliminar esta cuenta?', message: 'Solo se puede eliminar una cuenta sin movimientos.', confirmLabel: 'Eliminar', danger: true });
     if (!ok) return;
-    router.delete(route('accounts.destroy', props.account.id), { preserveScroll: true, onSuccess: () => close() });
+    const id = props.account.id;
+    // Sin conexión no se puede saber si tiene movimientos: lo decide el server al
+    // sincronizar, y si no se puede, queda en "Cambios sin sincronizar".
+    const result = await mutate({ entity: 'account', action: 'delete', id }, (extra) =>
+        router.delete(route('accounts.destroy', id), { preserveScroll: true, onSuccess: () => close(), ...extra })
+    );
+    if (result === 'queued') close();
 };
 </script>
 

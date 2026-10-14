@@ -5,12 +5,14 @@ import { IconX, IconPhoto, IconCheck, IconTrash } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { pickerIcons } from '@/tablerIcons';
 import { confirmAction } from '@/composables/useConfirm';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
 
 const props = defineProps({
     modelValue: { type: Boolean, default: false },
     type: { type: String, default: 'expense' },
     category: { type: Object, default: null }, // si viene, es edición
-    parentId: { type: Number, default: null }, // si viene, crea una subcategoría
+    parentId: { type: [Number, String], default: null }, // si viene, crea una subcategoría (String: id temporal sin conexión)
 });
 
 const emit = defineEmits(['update:modelValue', 'saved']);
@@ -77,34 +79,62 @@ const onImage = (e) => {
     imagePreview.value = URL.createObjectURL(file);
 };
 
-const submit = () => {
-    const url = isEdit.value
-        ? route('categories.update', props.category.id)
-        : route('categories.store');
+const submit = async () => {
+    const id = props.category?.id;
+    const { image, _method, ...fields } = form.data();
+    const data = { ...fields, icon_type: iconMode.value };
+    const tempId = isEdit.value ? null : newTempId();
 
-    form
-        .transform((data) => ({
-            ...data,
-            icon_type: iconMode.value,
-        }))
-        .post(url, {
-            preserveScroll: true,
-            forceFormData: true,
-            onSuccess: () => {
-                emit('saved');
-                close();
-            },
-        });
+    const result = await mutate(
+        {
+            entity: 'category',
+            action: isEdit.value ? 'update' : 'create',
+            id,
+            temp_id: tempId,
+            data,
+            file: iconMode.value === 'image' ? image : null,
+            fileName: image?.name,
+            // Una imagen nueva todavía no tiene URL: hasta sincronizar se ve un ícono genérico.
+            view: image
+                ? { ...data, icon_type: 'preset', icon_value: 'category', icon_url: null }
+                : { ...data, icon_url: data.icon_type === 'image' ? props.category?.icon_url ?? null : null },
+        },
+        (extra) =>
+            form
+                .transform((d) => ({ ...d, icon_type: iconMode.value }))
+                .post(isEdit.value ? route('categories.update', id) : route('categories.store'), {
+                    preserveScroll: true,
+                    forceFormData: true,
+                    onSuccess: () => {
+                        emit('saved');
+                        close();
+                    },
+                    ...extra,
+                })
+    );
+
+    if (result === 'queued') {
+        emit('saved', { id: id ?? tempId });
+        close();
+    }
 };
 
 const remove = async () => {
     if (!isEdit.value) return;
     const ok = await confirmAction({ title: '¿Eliminar esta categoría?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
     if (!ok) return;
-    router.delete(route('categories.destroy', props.category.id), {
-        preserveScroll: true,
-        onSuccess: () => { emit('saved'); close(); },
-    });
+    const id = props.category.id;
+    const result = await mutate({ entity: 'category', action: 'delete', id }, (extra) =>
+        router.delete(route('categories.destroy', id), {
+            preserveScroll: true,
+            onSuccess: () => { emit('saved'); close(); },
+            ...extra,
+        })
+    );
+    if (result === 'queued') {
+        emit('saved');
+        close();
+    }
 };
 </script>
 

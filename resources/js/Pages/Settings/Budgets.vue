@@ -5,6 +5,9 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash } from '@tabler/icons-vue';
 import { formatMoney } from '@/money';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
+import { overlayBudgets } from '@/offline/overlay';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
@@ -40,25 +43,37 @@ const openEdit = (item) => {
 };
 
 const openGlobal = () => {
-    editing.value = { categoryId: null, budgetId: props.global.id, name: 'Presupuesto total del mes' };
+    editing.value = { categoryId: null, budgetId: globalBudget.value.id, name: 'Presupuesto total del mes' };
     form.category_id = null;
-    form.amount = props.global.amount;
+    form.amount = globalBudget.value.amount;
     form.clearErrors();
 };
 
 const close = () => (editing.value = null);
 
-const save = () => {
-    form.post(route('budgets.store'), { preserveScroll: true, onSuccess: () => close() });
+const save = async () => {
+    const data = { category_id: form.category_id, amount: Number(form.amount) };
+    const result = await mutate(
+        { entity: 'budget', action: 'create', temp_id: newTempId(), data },
+        (extra) => form.post(route('budgets.store'), { preserveScroll: true, onSuccess: () => close(), ...extra })
+    );
+    if (result === 'queued') close();
 };
 
-const remove = () => {
-    if (!editing.value?.budgetId) return close();
-    router.delete(route('budgets.destroy', editing.value.budgetId), { preserveScroll: true, onSuccess: () => close() });
+const remove = async () => {
+    const id = editing.value?.budgetId;
+    if (!id) return close();
+    const result = await mutate({ entity: 'budget', action: 'delete', id }, (extra) =>
+        router.delete(route('budgets.destroy', id), { preserveScroll: true, onSuccess: () => close(), ...extra })
+    );
+    if (result === 'queued') close();
 };
 
-const withBudget = computed(() => props.categories.filter((c) => c.budget !== null));
-const withoutBudget = computed(() => props.categories.filter((c) => c.budget === null));
+// Con los presupuestos y las categorías cargados sin conexión.
+const shown = computed(() => overlayBudgets(props.categories, props.global));
+const globalBudget = computed(() => shown.value.global);
+const withBudget = computed(() => shown.value.categories.filter((c) => c.budget !== null));
+const withoutBudget = computed(() => shown.value.categories.filter((c) => c.budget === null));
 </script>
 
 <template>
@@ -72,12 +87,12 @@ const withoutBudget = computed(() => props.categories.filter((c) => c.budget ===
             <button type="button" class="w-full text-left rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4" @click="openGlobal">
                 <div class="flex items-center justify-between mb-2">
                     <span class="font-semibold">Presupuesto total</span>
-                    <span class="text-sm" :class="global.amount && global.spent > global.amount ? 'text-rose-500' : 'text-surface-500'">
-                        {{ money(global.spent) }} <span v-if="global.amount">/ {{ money(global.amount) }}</span>
+                    <span class="text-sm" :class="globalBudget.amount && globalBudget.spent > globalBudget.amount ? 'text-rose-500' : 'text-surface-500'">
+                        {{ money(globalBudget.spent) }} <span v-if="globalBudget.amount">/ {{ money(globalBudget.amount) }}</span>
                     </span>
                 </div>
-                <div v-if="global.amount" class="h-2 rounded-full bg-surface-200 dark:bg-surface-800 overflow-hidden">
-                    <div class="h-full rounded-full transition-all" :class="barColor(global.spent, global.amount)" :style="{ width: pct(global.spent, global.amount) + '%' }"></div>
+                <div v-if="globalBudget.amount" class="h-2 rounded-full bg-surface-200 dark:bg-surface-800 overflow-hidden">
+                    <div class="h-full rounded-full transition-all" :class="barColor(globalBudget.spent, globalBudget.amount)" :style="{ width: pct(globalBudget.spent, globalBudget.amount) + '%' }"></div>
                 </div>
                 <p v-else class="text-sm text-primary">Definir presupuesto total →</p>
             </button>

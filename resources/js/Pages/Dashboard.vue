@@ -3,7 +3,10 @@ import { computed, ref } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import TransactionRow from '@/Components/TransactionRow.vue';
 import TransactionDetail from '@/Components/TransactionDetail.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, router, usePage } from '@inertiajs/vue3';
+import { mutate } from '@/offline/mutate';
+import { overlayDashboard } from '@/offline/overlay';
+import { openTransactionEdit } from '@/offline/pages';
 import { IconChevronLeft, IconChevronRight, IconX } from '@tabler/icons-vue';
 import { formatMoney, formatMoneyWrappable } from '@/money';
 
@@ -16,6 +19,9 @@ const props = defineProps({
     baseSymbol: { type: String, default: '$' },
     symbols: { type: Object, default: () => ({}) },
 });
+
+// Listado y totales con los cambios hechos sin conexión que faltan sincronizar.
+const shown = computed(() => overlayDashboard(props));
 
 const moneyBase = (v) => formatMoney(v, props.baseSymbol);
 const moneyTotal = (v) => formatMoneyWrappable(v, props.baseSymbol);
@@ -54,14 +60,14 @@ function dateLabel(dateStr) {
 
 const groups = computed(() => {
     const map = new Map();
-    for (const t of props.transactions) {
+    for (const t of shown.value.transactions) {
         if (!map.has(t.date)) map.set(t.date, []);
         map.get(t.date).push(t);
     }
     return Array.from(map.entries()).map(([date, items]) => ({
         date,
         ...dateLabel(date),
-        totals: props.dayTotals[date] ?? { income: 0, expense: 0 },
+        totals: shown.value.dayTotals[date] ?? { income: 0, expense: 0 },
         items,
     }));
 });
@@ -70,12 +76,28 @@ const groups = computed(() => {
 const selectedTransaction = ref(null);
 const openDetail = (t) => (selectedTransaction.value = t);
 const closeDetail = () => (selectedTransaction.value = null);
-const deleteTransaction = (id) => {
-    router.delete(route('transactions.destroy', id), {
-        preserveScroll: true,
-        onSuccess: () => (selectedTransaction.value = null),
-    });
+const deleteTransaction = async (id) => {
+    const row = shown.value.transactions.find((t) => String(t.id) === String(id));
+    const result = await mutate(
+        {
+            entity: 'transaction',
+            action: 'delete',
+            id,
+            // Cómo está en el server, para descontarlo de los totales hasta sincronizar.
+            before: row && !row._pending ? row : null,
+        },
+        (extra) =>
+            router.delete(route('transactions.destroy', id), {
+                preserveScroll: true,
+                onSuccess: () => (selectedTransaction.value = null),
+                ...extra,
+            })
+    );
+    if (result === 'queued') selectedTransaction.value = null;
 };
+
+const page = usePage();
+const editTransaction = (row) => openTransactionEdit(row, page.version);
 </script>
 
 <template>
@@ -105,7 +127,7 @@ const deleteTransaction = (id) => {
                     @click="toggleFilter('income')"
                 >
                     <p class="text-xs text-surface-500">Ingresos</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold text-emerald-500 break-words hyphens-auto">{{ moneyTotal(totals.income) }}</p>
+                    <p class="mt-1 text-sm md:text-lg font-semibold text-emerald-500 break-words hyphens-auto">{{ moneyTotal(shown.totals.income) }}</p>
                 </button>
                 <button
                     type="button"
@@ -115,12 +137,12 @@ const deleteTransaction = (id) => {
                     @click="toggleFilter('expense')"
                 >
                     <p class="text-xs text-surface-500">Gastos</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(totals.expense) }}</p>
+                    <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(shown.totals.expense) }}</p>
                 </button>
                 <div class="min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
                     <p class="text-xs text-surface-500">Balance</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold break-words hyphens-auto" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
-                        {{ moneyTotal(totals.balance) }}
+                    <p class="mt-1 text-sm md:text-lg font-semibold break-words hyphens-auto" :class="shown.totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
+                        {{ moneyTotal(shown.totals.balance) }}
                     </p>
                 </div>
             </div>
@@ -179,6 +201,7 @@ const deleteTransaction = (id) => {
             :base-symbol="baseSymbol"
             @close="closeDetail"
             @delete="deleteTransaction"
+            @edit="editTransaction"
         />
     </AppLayout>
 </template>

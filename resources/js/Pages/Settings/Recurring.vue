@@ -6,6 +6,9 @@ import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash, IconPlus, IconRepeat } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
 import { formatMoney } from '@/money';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
+import { applyList, overlayAccountOptions, overlayCategoryOptions } from '@/offline/overlay';
 
 const props = defineProps({
     items: { type: Array, default: () => [] },
@@ -15,6 +18,11 @@ const props = defineProps({
 });
 
 const money = (v, code) => formatMoney(v, props.symbols[code] ?? '$');
+
+// Con lo hecho sin conexión (también cuentas y categorías nuevas para elegir).
+const shownItems = computed(() => applyList(props.items, 'recurring'));
+const accountOptions = computed(() => overlayAccountOptions(props.accounts));
+const categoryOptions = computed(() => overlayCategoryOptions(props.categories));
 
 const FREQ = [
     { value: 'daily', label: 'Día' },
@@ -37,12 +45,12 @@ const form = useForm({
     amount: null, frequency: 'monthly', interval: 1, next_run_date: isoToday, end_date: '', note: '', is_active: true,
 });
 
-const formCategories = computed(() => props.categories.filter((c) => c.type === form.type));
+const formCategories = computed(() => categoryOptions.value.filter((c) => c.type === form.type));
 
 const openNew = () => {
     editingId.value = null;
     form.reset();
-    form.account_id = props.accounts[0]?.id ?? null;
+    form.account_id = accountOptions.value[0]?.id ?? null;
     form.next_run_date = isoToday;
     form.clearErrors();
     showDialog.value = true;
@@ -50,8 +58,7 @@ const openNew = () => {
 const openEdit = (r) => {
     editingId.value = r.id;
     form.type = r.type;
-    form.account_id = props.accounts.find((a) => a.name === r.account)?.id ?? props.accounts[0]?.id;
-    form.category_id = null; // se re-selecciona abajo
+    form.account_id = r.account_id ?? accountOptions.value[0]?.id;
     form.amount = r.amount;
     form.frequency = r.frequency;
     form.interval = r.interval;
@@ -59,28 +66,55 @@ const openEdit = (r) => {
     form.end_date = r.end_date ?? '';
     form.note = r.note ?? '';
     form.is_active = r.is_active;
-    // buscar la categoría por nombre (el índice manda íconos)
-    const cat = props.categories.find((c) => c.type === r.type && c.name === r.category?.name);
-    form.category_id = cat?.id ?? null;
+    form.category_id = r.category_id ?? null;
     form.clearErrors();
     showDialog.value = true;
 };
+
+// La fila del listado tal como la arma RecurringTransactionController.
+function rowView(data) {
+    const account = accountOptions.value.find((a) => a.id === data.account_id);
+    const category = categoryOptions.value.find((c) => c.id === data.category_id);
+    return {
+        ...data,
+        amount: Number(data.amount),
+        interval: Number(data.interval),
+        end_date: data.end_date || null,
+        currency_code: account?.currency_code ?? 'ARS',
+        account: account?.name ?? null,
+        category: category
+            ? { name: category.name, icon_type: category.icon_type, icon_value: category.icon_value, icon_url: category.icon_url ?? null, color: category.color }
+            : null,
+    };
+}
 const close = () => (showDialog.value = false);
 
 watch(() => form.type, () => {
     if (!formCategories.value.some((c) => c.id === form.category_id)) form.category_id = null;
 });
 
-const save = () => {
+const save = async () => {
+    const id = editingId.value;
     const opts = { preserveScroll: true, onSuccess: () => close() };
-    if (editingId.value) form.patch(route('recurring.update', editingId.value), opts);
-    else form.post(route('recurring.store'), opts);
+    const data = form.data();
+    const result = await mutate(
+        { entity: 'recurring', action: id ? 'update' : 'create', id, temp_id: id ? null : newTempId(), data, view: rowView(data) },
+        (extra) =>
+            id
+                ? form.patch(route('recurring.update', id), { ...opts, ...extra })
+                : form.post(route('recurring.store'), { ...opts, ...extra })
+    );
+    if (result === 'queued') close();
 };
 const remove = async () => {
-    if (!editingId.value) return;
+    const id = editingId.value;
+    if (!id) return;
     const ok = await confirmAction({ title: '¿Eliminar esta recurrente?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
     if (!ok) return;
-    router.delete(route('recurring.destroy', editingId.value), { preserveScroll: true, onSuccess: () => close() });
+    const result = await mutate({ entity: 'recurring', action: 'delete', id }, (extra) =>
+        router.delete(route('recurring.destroy', id), { preserveScroll: true, onSuccess: () => close(), ...extra })
+    );
+    if (result === 'queued') close();
 };
 </script>
 
@@ -94,8 +128,8 @@ const remove = async () => {
                 (<code class="text-xs">php artisan schedule:work</code>).
             </p>
 
-            <div v-if="items.length" class="space-y-2">
-                <button v-for="r in items" :key="r.id" type="button"
+            <div v-if="shownItems.length" class="space-y-2">
+                <button v-for="r in shownItems" :key="r.id" type="button"
                     class="w-full flex items-center gap-3 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4 text-left hover:bg-surface-50 dark:hover:bg-surface-800"
                     :class="!r.is_active ? 'opacity-60' : ''"
                     @click="openEdit(r)">
@@ -148,7 +182,7 @@ const remove = async () => {
                             <div>
                                 <label class="text-xs text-surface-500">Cuenta</label>
                                 <select v-model="form.account_id" class="mt-1 w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800">
-                                    <option v-for="a in accounts" :key="a.id" :value="a.id">{{ a.name }}</option>
+                                    <option v-for="a in accountOptions" :key="a.id" :value="a.id">{{ a.name }}</option>
                                 </select>
                             </div>
                             <div>

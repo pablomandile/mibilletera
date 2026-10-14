@@ -10,6 +10,9 @@ import ConfirmDialog from '@/Components/ConfirmDialog.vue';
 import { confirmAction } from '@/composables/useConfirm';
 import { useHaptics } from '@/composables/useHaptics';
 import { formatAmount, formatInteger } from '@/money';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
+import { overlayAccountOptions, overlayCategoryOptions } from '@/offline/overlay';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] },
@@ -21,6 +24,10 @@ const props = defineProps({
 
 const page = usePage();
 const tx = props.transaction;
+
+// Con las cuentas y categorías creadas sin conexión que todavía no se sincronizaron.
+const accountOptions = computed(() => overlayAccountOptions(props.accounts));
+const categoryOptions = computed(() => overlayCategoryOptions(props.categories));
 const isEdit = computed(() => !!props.transaction);
 
 // Al editar, arrancamos con los 2 decimales explícitos (30000.3 → "30000.30").
@@ -32,8 +39,8 @@ function toExpression(value) {
 
 const type = ref(tx?.type ?? 'expense'); // expense | income | transfer
 const selectedCategoryId = ref(tx?.category_id ?? null);
-const selectedAccountId = ref(tx?.account_id ?? props.accounts[0]?.id ?? null);
-const toAccountId = ref(tx?.to_account_id ?? props.accounts[1]?.id ?? props.accounts[0]?.id ?? null);
+const selectedAccountId = ref(tx?.account_id ?? accountOptions.value[0]?.id ?? null);
+const toAccountId = ref(tx?.to_account_id ?? accountOptions.value[1]?.id ?? accountOptions.value[0]?.id ?? null);
 const expression = ref(tx ? toExpression(tx.amount) : '');
 const exchangeRate = ref(tx?.exchange_rate ?? 1);
 const transferAmount = ref(tx?.transfer_amount ?? null); // monto recibido (transferencia entre monedas distintas)
@@ -50,9 +57,9 @@ const showNewCategory = ref(false);
 const symbolOf = (code) => props.currencies.find((c) => c.code === code)?.symbol ?? '$';
 const baseSymbol = computed(() => symbolOf(props.defaultCurrency));
 
-const filteredCategories = computed(() => props.categories.filter((c) => c.type === type.value));
-const selectedAccount = computed(() => props.accounts.find((a) => a.id === selectedAccountId.value) ?? null);
-const toAccount = computed(() => props.accounts.find((a) => a.id === toAccountId.value) ?? null);
+const filteredCategories = computed(() => categoryOptions.value.filter((c) => c.type === type.value));
+const selectedAccount = computed(() => accountOptions.value.find((a) => a.id === selectedAccountId.value) ?? null);
+const toAccount = computed(() => accountOptions.value.find((a) => a.id === toAccountId.value) ?? null);
 const currencySymbol = computed(() => symbolOf(selectedAccount.value?.currency_code ?? props.defaultCurrency));
 
 const needsRate = computed(() =>
@@ -214,11 +221,73 @@ function save() {
         form.photo = photo.value;
     }
 
-    const url = isEdit.value
-        ? route('transactions.update', props.transaction.id)
-        : route('transactions.store');
+    const { photo: file, ...data } = form.data();
 
-    form.post(url, { forceFormData: true });
+    mutate(
+        {
+            entity: 'transaction',
+            action: isEdit.value ? 'update' : 'create',
+            id: isEdit.value ? props.transaction.id : null,
+            temp_id: isEdit.value ? null : newTempId(),
+            data,
+            file,
+            fileName: file?.name,
+            view: rowView(data),
+            before: serverState(),
+        },
+        (extra) =>
+            form.post(
+                isEdit.value ? route('transactions.update', props.transaction.id) : route('transactions.store'),
+                { forceFormData: true, ...extra }
+            ),
+    ).then((result) => {
+        if (result === 'queued') close();
+    });
+}
+
+// ---- Sin conexión ----
+// La fila del Inicio tal como la arma DashboardController, para mostrar el
+// movimiento ya aunque todavía no se haya sincronizado.
+function rowView(data) {
+    const account = accountOptions.value.find((a) => a.id === data.account_id);
+    const to = accountOptions.value.find((a) => a.id === data.to_account_id);
+    const category = categoryOptions.value.find((c) => c.id === data.category_id);
+    const isTransfer = data.type === 'transfer';
+    return {
+        type: data.type,
+        amount: Number(data.amount),
+        currency_code: account?.currency_code ?? props.defaultCurrency,
+        note: data.note || null,
+        date: data.transaction_date,
+        category: category
+            ? { name: category.name, icon_type: category.icon_type, icon_value: category.icon_value, icon_url: category.icon_url ?? null, color: category.color }
+            : null,
+        from_account: account?.name ?? null,
+        to_account: to?.name ?? null,
+        transfer_amount: isTransfer ? Number(data.transfer_amount) : null,
+        transfer_currency: isTransfer ? to?.currency_code ?? null : null,
+        account_id: data.account_id,
+        to_account_id: data.to_account_id ?? null,
+        category_id: data.category_id ?? null,
+        exchange_rate: Number(data.exchange_rate ?? 1),
+        // Una foto nueva todavía no tiene URL: se ve recién al sincronizar.
+        photo_url: photo.value ? null : props.transaction?.photo_url ?? null,
+    };
+}
+
+// Cómo está en el server (para corregir totales y saldos mientras tanto).
+function serverState() {
+    const t = props.transaction;
+    if (!t) return null;
+    return {
+        type: t.type,
+        amount: Number(t.amount),
+        exchange_rate: Number(t.exchange_rate ?? 1),
+        date: t.transaction_date,
+        account_id: t.account_id,
+        to_account_id: t.to_account_id ?? null,
+        transfer_amount: t.transfer_amount ?? null,
+    };
 }
 
 const close = () => router.visit(route('dashboard'));
@@ -227,7 +296,18 @@ const remove = async () => {
     if (!isEdit.value) return;
     const ok = await confirmAction({ title: '¿Eliminar este movimiento?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
     if (!ok) return;
-    router.delete(route('transactions.destroy', props.transaction.id));
+    const id = props.transaction.id;
+    const result = await mutate(
+        { entity: 'transaction', action: 'delete', id, before: serverState() },
+        (extra) => router.delete(route('transactions.destroy', id), extra)
+    );
+    if (result === 'queued') close();
+};
+
+// La categoría nueva creada sin conexión no llega por el flash del server.
+const onCategorySaved = (category) => {
+    showNewCategory.value = false;
+    if (category?.id) selectedCategoryId.value = category.id;
 };
 
 watch(
@@ -291,14 +371,14 @@ const tabClass = (t, activeColor) =>
                 <div class="flex-1 min-w-0">
                     <label class="text-xs text-surface-500">De</label>
                     <select v-model="selectedAccountId" class="mt-1 w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-900 py-2">
-                        <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
+                        <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
                     </select>
                 </div>
                 <IconArrowRight :size="22" class="text-surface-400 mt-5 shrink-0" />
                 <div class="flex-1 min-w-0">
                     <label class="text-xs text-surface-500">A</label>
                     <select v-model="toAccountId" class="mt-1 w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-900 py-2">
-                        <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
+                        <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }} ({{ acc.currency_code }})</option>
                     </select>
                 </div>
             </div>
@@ -309,7 +389,7 @@ const tabClass = (t, activeColor) =>
             <div class="max-w-md mx-auto">
                 <div class="flex items-center justify-between px-4 pt-3 gap-3">
                     <select v-if="type !== 'transfer'" v-model="selectedAccountId" class="text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1.5 pr-8 max-w-[45%] min-w-0">
-                        <option v-for="acc in accounts" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
+                        <option v-for="acc in accountOptions" :key="acc.id" :value="acc.id">{{ acc.name }}</option>
                     </select>
                     <span v-else class="text-sm text-surface-500 truncate">Monto a transferir</span>
                     <div class="text-right flex-1 min-w-0">
@@ -366,7 +446,7 @@ const tabClass = (t, activeColor) =>
             </div>
         </div>
 
-        <CategoryFormDialog v-model="showNewCategory" :type="type === 'income' ? 'income' : 'expense'" @saved="showNewCategory = false" />
+        <CategoryFormDialog v-model="showNewCategory" :type="type === 'income' ? 'income' : 'expense'" @saved="onCategorySaved" />
         <ConfirmDialog />
     </div>
 </template>

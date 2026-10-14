@@ -6,6 +6,7 @@ import AccountFormDialog from '@/Components/AccountFormDialog.vue';
 import { Head } from '@inertiajs/vue3';
 import { IconPlus } from '@tabler/icons-vue';
 import { formatMoney } from '@/money';
+import { overlayAccounts } from '@/offline/overlay';
 
 const props = defineProps({
     accounts: { type: Array, default: () => [] },
@@ -19,8 +20,11 @@ const TYPE_LABELS = { cash: 'Efectivo', bank: 'Banco', card: 'Tarjeta', other: '
 const symbolFor = (code) => props.currencies.find((c) => c.code === code)?.symbol ?? '$';
 const money = (v, code) => formatMoney(v, symbolFor(code));
 
-const active = computed(() => props.accounts.filter((a) => !a.is_archived));
-const archived = computed(() => props.accounts.filter((a) => a.is_archived));
+// Con lo hecho sin conexión: cuentas nuevas o editadas y saldos corregidos por
+// los movimientos que faltan sincronizar.
+const shown = computed(() => overlayAccounts(props.accounts));
+const active = computed(() => shown.value.filter((a) => !a.is_archived));
+const archived = computed(() => shown.value.filter((a) => a.is_archived));
 
 const openNew = () => { editing.value = null; showDialog.value = true; };
 const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };

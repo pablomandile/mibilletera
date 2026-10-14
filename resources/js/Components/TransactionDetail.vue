@@ -1,6 +1,5 @@
 <script setup>
 import { computed } from 'vue';
-import { Link } from '@inertiajs/vue3';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import { IconX, IconPencil, IconTrash, IconArrowsExchange } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
@@ -11,7 +10,7 @@ const props = defineProps({
     symbols: { type: Object, default: () => ({}) },
     baseSymbol: { type: String, default: '$' },
 });
-const emit = defineEmits(['close', 'delete']);
+const emit = defineEmits(['close', 'delete', 'edit']);
 
 const t = computed(() => props.transaction);
 const isTransfer = computed(() => t.value?.type === 'transfer');
@@ -98,12 +97,15 @@ const remove = async () => {
                         <button type="button" class="grid place-items-center h-11 w-11 rounded-xl border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 shrink-0" @click="remove">
                             <IconTrash :size="20" />
                         </button>
-                        <Link
-                            :href="route('transactions.edit', t.id)"
+                        <!-- Sin conexión (o si tiene cambios sin sincronizar) la edición se
+                             arma en el cliente: ver openEdit en Dashboard. -->
+                        <button
+                            type="button"
                             class="flex-1 flex items-center justify-center gap-2 rounded-xl bg-primary py-3 font-semibold text-primary-contrast hover:brightness-95"
+                            @click="emit('edit', t)"
                         >
                             <IconPencil :size="20" /> Editar
-                        </Link>
+                        </button>
                     </div>
                 </div>
             </div>

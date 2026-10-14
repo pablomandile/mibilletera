@@ -2,12 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Account;
+use App\Actions\RecurringTransactionActions;
 use App\Models\Currency;
 use App\Models\RecurringTransaction;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class RecurringTransactionController extends Controller
@@ -41,6 +40,8 @@ class RecurringTransactionController extends Controller
                     'color' => $r->category->color,
                 ] : null,
                 'account' => $r->account?->name,
+                'account_id' => $r->account_id,
+                'category_id' => $r->category_id,
             ]);
 
         return Inertia::render('Settings/Recurring', [
@@ -51,61 +52,28 @@ class RecurringTransactionController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, RecurringTransactionActions $actions)
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $data = $this->validateData($request, $user);
-        $account = Account::where('user_id', $user->id)->findOrFail($data['account_id']);
-
-        $user->recurringTransactions()->create([
-            ...$data,
-            'currency_code' => $account->currency_code,
-            'exchange_rate' => 1,
-            'is_active' => true,
-        ]);
+        $actions->create(Auth::user(), $request->all());
 
         return back()->with('success', 'Recurrente creada.');
     }
 
-    public function update(Request $request, RecurringTransaction $recurring)
+    public function update(Request $request, RecurringTransaction $recurring, RecurringTransactionActions $actions)
     {
         abort_unless($recurring->user_id === Auth::id(), 403);
 
-        $data = $this->validateData($request, Auth::user());
-        $account = Account::where('user_id', Auth::id())->findOrFail($data['account_id']);
-
-        $recurring->update([
-            ...$data,
-            'currency_code' => $account->currency_code,
-            'is_active' => $request->boolean('is_active', $recurring->is_active),
-        ]);
+        $actions->update(Auth::user(), $recurring, $request->all());
 
         return back()->with('success', 'Recurrente actualizada.');
     }
 
-    public function destroy(RecurringTransaction $recurring)
+    public function destroy(RecurringTransaction $recurring, RecurringTransactionActions $actions)
     {
         abort_unless($recurring->user_id === Auth::id(), 403);
 
-        $recurring->delete();
+        $actions->delete(Auth::user(), $recurring);
 
         return back()->with('success', 'Recurrente eliminada.');
-    }
-
-    private function validateData(Request $request, $user): array
-    {
-        return $request->validate([
-            'type' => ['required', Rule::in(['expense', 'income'])],
-            'account_id' => ['required', Rule::exists('accounts', 'id')->where('user_id', $user->id)],
-            'category_id' => ['required', Rule::exists('categories', 'id')->where('user_id', $user->id)],
-            'amount' => ['required', 'numeric', 'gt:0'],
-            'frequency' => ['required', Rule::in(['daily', 'weekly', 'monthly', 'yearly'])],
-            'interval' => ['required', 'integer', 'min:1', 'max:365'],
-            'next_run_date' => ['required', 'date'],
-            'end_date' => ['nullable', 'date', 'after_or_equal:next_run_date'],
-            'note' => ['nullable', 'string', 'max:255'],
-        ]);
     }
 }

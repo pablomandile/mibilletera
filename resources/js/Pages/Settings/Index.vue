@@ -6,6 +6,11 @@ import { useTheme } from '@/composables/useTheme';
 import { useHaptics } from '@/composables/useHaptics';
 import { useFontSize, FONT_SIZES } from '@/composables/useFontSize';
 import { Head, Link, usePage, router, useForm } from '@inertiajs/vue3';
+import { confirmAction } from '@/composables/useConfirm';
+import { mutate } from '@/offline/mutate';
+import { ops, failedOps, retryOp, discardOp, dependentsOf } from '@/offline/outbox';
+import { syncNow } from '@/offline/sync';
+import { pendingPreference } from '@/offline/overlay';
 import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
@@ -19,7 +24,8 @@ const props = defineProps({
 const page = usePage();
 const user = computed(() => page.props.auth?.user ?? {});
 const isAdmin = computed(() => user.value.role === 'admin');
-const currentCurrency = computed(() => user.value.default_currency ?? 'ARS');
+// La elegida sin conexión manda hasta que se sincronice.
+const currentCurrency = computed(() => pendingPreference('default_currency') ?? user.value.default_currency ?? 'ARS');
 
 // --- Tema --- (estado compartido con el botón del header)
 const { isDark, toggleTheme } = useTheme();
@@ -34,7 +40,42 @@ const { supported: canVibrate, enabled: hapticsOn, toggle: toggleHaptics } = use
 const showCurrency = ref(false);
 const currencyForm = useForm({ default_currency: currentCurrency.value });
 const openCurrency = () => { currencyForm.default_currency = currentCurrency.value; showCurrency.value = true; };
-const saveCurrency = () => currencyForm.patch(route('preferences.update'), { preserveScroll: true, onSuccess: () => (showCurrency.value = false) });
+const saveCurrency = async () => {
+    const result = await mutate(
+        { entity: 'preferences', action: 'update', data: currencyForm.data() },
+        (extra) => currencyForm.patch(route('preferences.update'), { preserveScroll: true, onSuccess: () => (showCurrency.value = false), ...extra })
+    );
+    if (result === 'queued') showCurrency.value = false;
+};
+
+// --- Cambios sin sincronizar que el server rechazó ---
+const ENTITY_LABELS = {
+    transaction: 'Movimiento', account: 'Cuenta', category: 'Categoría', budget: 'Presupuesto',
+    recurring: 'Recurrente', reminder: 'Recordatorio', preferences: 'Preferencias',
+};
+const ACTION_LABELS = { create: 'nuevo', update: 'editado', delete: 'borrado' };
+const describe = (op) => {
+    const name = op.view?.name ?? op.view?.title ?? op.view?.category?.name ?? op.view?.note ?? '';
+    return `${ENTITY_LABELS[op.entity] ?? op.entity} ${ACTION_LABELS[op.action] ?? ''}${name ? ` · ${name}` : ''}`;
+};
+const firstError = (op) => Object.values(op.errors ?? {}).flat()[0] ?? 'El servidor no lo aceptó.';
+
+const retry = async (op) => {
+    await retryOp(op.op_id);
+    syncNow();
+};
+const discard = async (op) => {
+    const others = dependentsOf(op.op_id).length - 1;
+    const ok = await confirmAction({
+        title: '¿Descartar este cambio?',
+        message: others > 0
+            ? `También se descartan ${others === 1 ? '1 cambio que depende' : `${others} cambios que dependen`} de él. No se puede deshacer.`
+            : 'Se pierde lo que cargaste sin conexión. No se puede deshacer.',
+        confirmLabel: 'Descartar',
+        danger: true,
+    });
+    if (ok) discardOp(op.op_id);
+};
 
 const groups = [
     {
@@ -55,7 +96,17 @@ const groups = [
     },
 ];
 
-const logout = () => router.post(route('logout'));
+const logout = async () => {
+    if (ops.value.length) {
+        const ok = await confirmAction({
+            title: '¿Cerrar sesión?',
+            message: `Tenés ${ops.value.length === 1 ? '1 cambio' : `${ops.value.length} cambios`} sin sincronizar. Quedan guardados en este dispositivo y se mandan cuando vuelvas a iniciar sesión.`,
+            confirmLabel: 'Cerrar sesión',
+        });
+        if (!ok) return;
+    }
+    router.post(route('logout'));
+};
 </script>
 
 <template>
@@ -77,6 +128,23 @@ const logout = () => router.post(route('logout'));
 
             <!-- Instalar la PWA (solo aparece si todavía no está instalada) -->
             <InstallButton />
+
+            <!-- Cambios hechos sin conexión que el server rechazó -->
+            <div v-if="failedOps.length" class="space-y-2">
+                <p class="px-1 text-xs font-medium uppercase tracking-wide text-amber-600 dark:text-amber-400">Cambios sin sincronizar</p>
+                <div class="rounded-2xl bg-white dark:bg-surface-900 border border-amber-500/40 divide-y divide-surface-200 dark:divide-surface-800 overflow-hidden">
+                    <div v-for="op in failedOps" :key="op.op_id" class="px-4 py-3 space-y-2">
+                        <div class="min-w-0">
+                            <p class="text-sm font-medium break-words hyphens-auto">{{ describe(op) }}</p>
+                            <p class="text-xs text-rose-500 break-words">{{ firstError(op) }}</p>
+                        </div>
+                        <div class="flex gap-2">
+                            <button type="button" class="flex-1 rounded-lg border border-surface-300 dark:border-surface-700 py-2 text-sm font-medium" @click="retry(op)">Reintentar</button>
+                            <button type="button" class="flex-1 rounded-lg border border-rose-500/30 text-rose-500 py-2 text-sm font-medium" @click="discard(op)">Descartar</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
             <!-- Grupos -->
             <div v-for="group in groups" :key="group.title" class="space-y-2">

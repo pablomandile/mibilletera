@@ -24,6 +24,7 @@
         "@primevue/themes": "^4.5.4",
         "@tabler/icons-vue": "^3.45.0",
         "chart.js": "^4.5.1",
+        "idb": "^8.0.4",
         "primeicons": "^8.0.0",
         "primevue": "^4.5.5",
         "tailwindcss-primeui": "^0.6.1"

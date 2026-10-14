@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch } from 'vue';
+import { computed, watch, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
@@ -14,7 +14,13 @@ import {
     IconPlus,
     IconLogout,
     IconInfoCircle,
+    IconCloudOff,
 } from '@tabler/icons-vue';
+import { offline, cachedAt } from '@/offline/connection';
+import { ops } from '@/offline/outbox';
+import { syncing, needsLogin } from '@/offline/sync';
+import { notices } from '@/offline/notices';
+import { confirmAction } from '@/composables/useConfirm';
 
 defineProps({
     title: { type: String, default: '' },
@@ -35,7 +41,19 @@ const navItems = [
     { label: 'Ajustes', href: '/settings', icon: IconUser },
 ];
 
-const logout = () => router.post(route('logout'));
+const logout = async () => {
+    // La cola espera al mismo usuario, pero si cierra sesión sin conexión los
+    // cambios no se pueden mandar hasta que vuelva a entrar.
+    if (ops.value.length) {
+        const ok = await confirmAction({
+            title: '¿Cerrar sesión?',
+            message: `Tenés ${ops.value.length === 1 ? '1 cambio' : `${ops.value.length} cambios`} sin sincronizar. Quedan guardados en este dispositivo y se mandan cuando vuelvas a iniciar sesión.`,
+            confirmLabel: 'Cerrar sesión',
+        });
+        if (!ok) return;
+    }
+    router.post(route('logout'));
+};
 
 // Toast de confirmación para los mensajes flash de éxito.
 const toast = useToast();
@@ -43,10 +61,48 @@ watch(
     () => page.props.flash?.success,
     (msg) => { if (msg) toast.add({ severity: 'success', summary: msg, life: 2500 }); }
 );
+
+// ---- Sin conexión ----
+// Avisos de la sincronización y de pantallas sin AppLayout (ver offline/notices).
+watch(
+    notices,
+    (list) => {
+        if (!list.length) return;
+        list.forEach((n) => toast.add({ ...n, life: n.severity === 'warn' ? 5000 : 2500 }));
+        notices.value = [];
+    },
+    { immediate: true }
+);
+
+const pendingCount = computed(() => ops.value.filter((o) => o.status !== 'error').length);
+const failedCount = computed(() => ops.value.filter((o) => o.status === 'error').length);
+const pendingLabel = computed(() => {
+    const n = pendingCount.value;
+    if (!n) return '';
+    return n === 1 ? '1 cambio sin sincronizar' : `${n} cambios sin sincronizar`;
+});
+
+const cachedLabel = computed(() => {
+    if (!cachedAt.value) return '';
+    const d = new Date(cachedAt.value);
+    if (Number.isNaN(d.getTime())) return '';
+    return d.toLocaleString('es-AR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+});
+
+// Pantalla que no se llegó a guardar (ver startOffline en app.js).
+const onOfflineMiss = () =>
+    toast.add({
+        severity: 'warn',
+        summary: 'Sin conexión',
+        detail: 'Esta pantalla todavía no está guardada. Abrila una vez con conexión.',
+        life: 4000,
+    });
+onMounted(() => window.addEventListener('offline:miss', onOfflineMiss));
+onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
 </script>
 
 <template>
-    <div class="min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
+    <div class="piggy-backdrop min-h-screen bg-surface-50 dark:bg-surface-950 text-surface-900 dark:text-surface-100">
         <Toast position="top-center" />
         <ConfirmDialog />
 
@@ -151,6 +207,23 @@ watch(
                 <ThemeToggle />
                 <NotificationBell />
             </header>
+
+            <div
+                v-if="offline || pendingCount || failedCount"
+                class="flex items-center gap-2 px-4 md:px-6 py-2 text-xs bg-amber-500/15 text-amber-700 dark:text-amber-300"
+                role="status"
+            >
+                <IconCloudOff :size="16" class="shrink-0" />
+                <span class="min-w-0">
+                    <template v-if="offline">Sin conexión<template v-if="cachedLabel"> · datos guardados el {{ cachedLabel }}</template></template>
+                    <template v-else-if="needsLogin">Iniciá sesión de nuevo para sincronizar</template>
+                    <template v-else-if="syncing">Sincronizando…</template>
+                    <template v-if="pendingLabel">{{ offline || needsLogin || syncing ? ' · ' : '' }}{{ pendingLabel }}</template>
+                    <Link v-if="failedCount" href="/settings" class="underline">
+                        {{ offline || pendingLabel ? ' · ' : '' }}{{ failedCount === 1 ? '1 cambio con error' : `${failedCount} cambios con error` }}
+                    </Link>
+                </span>
+            </div>
 
             <main class="px-4 md:px-6 py-4 md:py-6 pb-28 md:pb-8">
                 <slot />

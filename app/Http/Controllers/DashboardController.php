@@ -78,6 +78,12 @@ class DashboardController extends Controller
                 'to_account' => $t->toAccount?->name,
                 'transfer_amount' => $t->transfer_amount !== null ? (float) $t->transfer_amount : null,
                 'transfer_currency' => $t->transfer_currency,
+                // Para poder abrir la edición sin conexión, armada desde esta fila.
+                'account_id' => $t->account_id,
+                'to_account_id' => $t->to_account_id,
+                'category_id' => $t->category_id,
+                'exchange_rate' => (float) $t->exchange_rate,
+                'photo_url' => $t->photo_url,
             ]),
             'period' => [
                 'month' => $date->format('Y-m'),

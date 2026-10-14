@@ -12,6 +12,7 @@ use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportsController;
+use App\Http\Controllers\SyncController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Currency;
@@ -54,6 +55,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/about', AboutController::class)->name('about');
 
     Route::patch('/preferences', [PreferencesController::class, 'update'])->name('preferences.update');
+
+    // Cambios hechos sin conexión (la cola de la app, ver resources/js/offline)
+    Route::post('/sync', SyncController::class)->name('sync');
 
     // Notificaciones (campanita)
     Route::post('/notifications/read', [NotificationController::class, 'markRead'])->name('notifications.read');

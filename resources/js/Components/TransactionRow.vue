@@ -1,6 +1,6 @@
 <script setup>
 import CategoryIcon from '@/Components/CategoryIcon.vue';
-import { IconArrowsExchange, IconTrash } from '@tabler/icons-vue';
+import { IconArrowsExchange, IconTrash, IconCloudOff } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
 import { useSwipeRow } from '@/composables/useSwipeRow';
 import { formatMoney } from '@/money';
@@ -44,7 +44,7 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
 
         <!-- Contenido deslizable -->
         <div
-            class="relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-900 cursor-pointer select-none touch-pan-y"
+            class="piggy-surface relative flex items-center gap-3 px-4 py-3 bg-white dark:bg-surface-900 cursor-pointer select-none touch-pan-y"
             :class="swiping ? '' : 'transition-transform duration-150'"
             :style="{ transform: `translateX(${dx}px)` }"
             @pointerdown="onDown"
@@ -62,6 +62,7 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                     <p class="text-xs text-surface-500 break-words hyphens-auto">{{ transaction.from_account }} → {{ transaction.to_account }}</p>
                 </div>
                 <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums text-surface-500">{{ money(transaction.amount, transaction.currency_code) }}</span>
+                <IconCloudOff v-if="transaction._pending" :size="16" class="shrink-0 text-amber-500" aria-label="Sin sincronizar" />
             </template>
 
             <!-- Gasto / ingreso -->
@@ -81,6 +82,7 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                 <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" :class="transaction.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
                     {{ transaction.type === 'income' ? '+' : '-' }}{{ money(transaction.amount, transaction.currency_code) }}
                 </span>
+                <IconCloudOff v-if="transaction._pending" :size="16" class="shrink-0 text-amber-500" aria-label="Sin sincronizar" />
             </template>
         </div>
     </div>

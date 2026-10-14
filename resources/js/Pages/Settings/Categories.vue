@@ -5,13 +5,15 @@ import CategoryIcon from '@/Components/CategoryIcon.vue';
 import CategoryFormDialog from '@/Components/CategoryFormDialog.vue';
 import { Head } from '@inertiajs/vue3';
 import { IconPlus, IconPencil, IconCornerDownRight } from '@tabler/icons-vue';
+import { overlayCategoryTree } from '@/offline/overlay';
 
 const props = defineProps({
     categories: { type: Array, default: () => [] }, // top-level con children
 });
 
 const type = ref('expense');
-const list = computed(() => props.categories.filter((c) => c.type === type.value));
+// Con las altas, ediciones y bajas hechas sin conexión.
+const list = computed(() => overlayCategoryTree(props.categories).filter((c) => c.type === type.value));
 
 const showDialog = ref(false);
 const dialogCategory = ref(null);

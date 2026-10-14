@@ -45,3 +45,50 @@ body {
 .no-scrollbar::-webkit-scrollbar {
     display: none;
 }
+
+/* Chanchito alcancía de fondo: grande y fijo detrás de la app, chico en la
+   esquina de cada tarjeta. Verde pálido y muy tenue para no molestar al leer;
+   en tema oscuro, todavía más. Es resources/images/chanchito.svg en línea, con
+   distinta opacidad en cada variante: si se cambia el dibujo, hay que
+   regenerarlas. */
+:root {
+    --piggy-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 104' opacity='0.55'%3E%3Cg fill='%23bbf7d0'%3E%3Ccircle cx='64' cy='12' r='9'/%3E%3Crect x='32' y='72' width='14' height='22' rx='6'/%3E%3Crect x='78' y='72' width='14' height='22' rx='6'/%3E%3Cellipse cx='62' cy='56' rx='45' ry='33'/%3E%3Crect x='97' y='45' width='20' height='22' rx='9'/%3E%3Cpath d='M38 32 L44 12 Q46 8 50 11 L60 26 Z'/%3E%3C/g%3E%3Cpath d='M18 52 Q6 50 9 41 Q12 34 18 39' fill='none' stroke='%23bbf7d0' stroke-width='4.5' stroke-linecap='round'/%3E%3Cg fill='%2386efac'%3E%3Crect x='52' y='28' width='24' height='5' rx='2.5'/%3E%3Ccircle cx='87' cy='47' r='3.6'/%3E%3Ccircle cx='104' cy='56' r='2.4'/%3E%3Ccircle cx='111' cy='56' r='2.4'/%3E%3Crect x='61' y='8' width='6' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E");
+    --piggy-card: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 104' opacity='0.45'%3E%3Cg fill='%23bbf7d0'%3E%3Ccircle cx='64' cy='12' r='9'/%3E%3Crect x='32' y='72' width='14' height='22' rx='6'/%3E%3Crect x='78' y='72' width='14' height='22' rx='6'/%3E%3Cellipse cx='62' cy='56' rx='45' ry='33'/%3E%3Crect x='97' y='45' width='20' height='22' rx='9'/%3E%3Cpath d='M38 32 L44 12 Q46 8 50 11 L60 26 Z'/%3E%3C/g%3E%3Cpath d='M18 52 Q6 50 9 41 Q12 34 18 39' fill='none' stroke='%23bbf7d0' stroke-width='4.5' stroke-linecap='round'/%3E%3Cg fill='%2386efac'%3E%3Crect x='52' y='28' width='24' height='5' rx='2.5'/%3E%3Ccircle cx='87' cy='47' r='3.6'/%3E%3Ccircle cx='104' cy='56' r='2.4'/%3E%3Ccircle cx='111' cy='56' r='2.4'/%3E%3Crect x='61' y='8' width='6' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+.dark {
+    --piggy-bg: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 104' opacity='0.05'%3E%3Cg fill='%23bbf7d0'%3E%3Ccircle cx='64' cy='12' r='9'/%3E%3Crect x='32' y='72' width='14' height='22' rx='6'/%3E%3Crect x='78' y='72' width='14' height='22' rx='6'/%3E%3Cellipse cx='62' cy='56' rx='45' ry='33'/%3E%3Crect x='97' y='45' width='20' height='22' rx='9'/%3E%3Cpath d='M38 32 L44 12 Q46 8 50 11 L60 26 Z'/%3E%3C/g%3E%3Cpath d='M18 52 Q6 50 9 41 Q12 34 18 39' fill='none' stroke='%23bbf7d0' stroke-width='4.5' stroke-linecap='round'/%3E%3Cg fill='%2386efac'%3E%3Crect x='52' y='28' width='24' height='5' rx='2.5'/%3E%3Ccircle cx='87' cy='47' r='3.6'/%3E%3Ccircle cx='104' cy='56' r='2.4'/%3E%3Ccircle cx='111' cy='56' r='2.4'/%3E%3Crect x='61' y='8' width='6' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E");
+    --piggy-card: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 128 104' opacity='0.06'%3E%3Cg fill='%23bbf7d0'%3E%3Ccircle cx='64' cy='12' r='9'/%3E%3Crect x='32' y='72' width='14' height='22' rx='6'/%3E%3Crect x='78' y='72' width='14' height='22' rx='6'/%3E%3Cellipse cx='62' cy='56' rx='45' ry='33'/%3E%3Crect x='97' y='45' width='20' height='22' rx='9'/%3E%3Cpath d='M38 32 L44 12 Q46 8 50 11 L60 26 Z'/%3E%3C/g%3E%3Cpath d='M18 52 Q6 50 9 41 Q12 34 18 39' fill='none' stroke='%23bbf7d0' stroke-width='4.5' stroke-linecap='round'/%3E%3Cg fill='%2386efac'%3E%3Crect x='52' y='28' width='24' height='5' rx='2.5'/%3E%3Ccircle cx='87' cy='47' r='3.6'/%3E%3Ccircle cx='104' cy='56' r='2.4'/%3E%3Ccircle cx='111' cy='56' r='2.4'/%3E%3Crect x='61' y='8' width='6' height='8' rx='2'/%3E%3C/g%3E%3C/svg%3E");
+}
+
+/* Con un pseudo-elemento y no con background-attachment: fixed, que Safari de
+   iOS ignora (el dibujo se iría con el scroll). isolation + z-index -1 lo dejan
+   detrás del contenido pero delante del color de fondo. */
+.piggy-backdrop {
+    isolation: isolate;
+}
+.piggy-backdrop::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background: var(--piggy-bg) no-repeat right -40px bottom 64px / min(70vw, 380px) auto;
+}
+@media (min-width: 768px) {
+    .piggy-backdrop::before {
+        background-position: right -30px bottom -20px;
+    }
+}
+
+/* Tarjetas del contenido (las del listado, ajustes, totales…). El color de la
+   tarjeta lo pone bg-white / bg-surface-900, que solo toca background-color. */
+.piggy-backdrop main .rounded-2xl.border:not(.border-dashed),
+/* Las filas del listado tienen fondo propio (lo necesita el deslizar para
+   borrar) y tapan el de la tarjeta: el dibujo va en la última, que es donde cae
+   la esquina. */
+.piggy-backdrop main .divide-y > :last-child > .piggy-surface {
+    background-image: var(--piggy-card);
+    background-repeat: no-repeat;
+    background-position: right -10px bottom -12px;
+    background-size: 64px auto;
+}

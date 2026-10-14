@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\AccountActions;
 use App\Models\Account;
 use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class AccountController extends Controller
@@ -38,55 +38,28 @@ class AccountController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, AccountActions $actions)
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $data = $this->validateAccount($request);
-
-        $data['sort_order'] = (int) $user->accounts()->max('sort_order') + 1;
-        $user->accounts()->create($data);
+        $actions->create(Auth::user(), $request->all());
 
         return back()->with('success', 'Cuenta creada.');
     }
 
-    public function update(Request $request, Account $account)
+    public function update(Request $request, Account $account, AccountActions $actions)
     {
         abort_unless($account->user_id === Auth::id(), 403);
 
-        $account->update($this->validateAccount($request));
+        $actions->update(Auth::user(), $account, $request->all());
 
         return back()->with('success', 'Cuenta actualizada.');
     }
 
-    public function destroy(Account $account)
+    public function destroy(Account $account, AccountActions $actions)
     {
         abort_unless($account->user_id === Auth::id(), 403);
 
-        if ($account->transactions()->exists()) {
-            return back()->withErrors(['account' => 'No se puede eliminar una cuenta con movimientos. Archivala en su lugar.']);
-        }
-
-        if (Auth::user()->accounts()->where('is_archived', false)->count() <= 1) {
-            return back()->withErrors(['account' => 'Debe existir al menos una cuenta activa.']);
-        }
-
-        $account->delete();
+        $actions->delete(Auth::user(), $account);
 
         return back()->with('success', 'Cuenta eliminada.');
-    }
-
-    private function validateAccount(Request $request): array
-    {
-        return $request->validate([
-            'name' => ['required', 'string', 'max:60'],
-            'type' => ['required', Rule::in(['cash', 'bank', 'card', 'other'])],
-            'currency_code' => ['required', Rule::exists('currencies', 'code')],
-            'initial_balance' => ['required', 'numeric'],
-            'color' => ['nullable', 'string', 'max:20'],
-            'icon' => ['nullable', 'string', 'max:40'],
-            'is_archived' => ['boolean'],
-        ]);
     }
 }

@@ -1,9 +1,12 @@
 <script setup>
-import { ref } from 'vue';
+import { ref, computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, useForm, router } from '@inertiajs/vue3';
 import { IconX, IconTrash, IconPlus, IconBell } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
+import { mutate } from '@/offline/mutate';
+import { newTempId } from '@/offline/outbox';
+import { applyList } from '@/offline/overlay';
 
 const props = defineProps({
     reminders: { type: Array, default: () => [] },
@@ -35,19 +38,35 @@ const toggleDay = (v) => {
     if (i === -1) form.days.push(v); else form.days.splice(i, 1);
 };
 
-const save = () => {
+// Con lo hecho sin conexión.
+const shown = computed(() => applyList(props.reminders, 'reminder'));
+
+const write = (action, id, data, online) =>
+    mutate({ entity: 'reminder', action, id, temp_id: action === 'create' ? newTempId() : null, data, view: data }, online);
+
+const save = async () => {
+    const id = editingId.value;
     const opts = { preserveScroll: true, onSuccess: () => close() };
-    if (editingId.value) form.patch(route('reminders.update', editingId.value), opts);
-    else form.post(route('reminders.store'), opts);
+    const result = await write(id ? 'update' : 'create', id, form.data(), (extra) =>
+        id
+            ? form.patch(route('reminders.update', id), { ...opts, ...extra })
+            : form.post(route('reminders.store'), { ...opts, ...extra })
+    );
+    if (result === 'queued') close();
 };
 const remove = async () => {
-    if (!editingId.value) return;
+    const id = editingId.value;
+    if (!id) return;
     const ok = await confirmAction({ title: '¿Eliminar este recordatorio?', message: 'Esta acción no se puede deshacer.', confirmLabel: 'Eliminar', danger: true });
     if (!ok) return;
-    router.delete(route('reminders.destroy', editingId.value), { preserveScroll: true, onSuccess: () => close() });
+    const result = await mutate({ entity: 'reminder', action: 'delete', id }, (extra) =>
+        router.delete(route('reminders.destroy', id), { preserveScroll: true, onSuccess: () => close(), ...extra })
+    );
+    if (result === 'queued') close();
 };
 const toggleEnabled = (r) => {
-    router.patch(route('reminders.update', r.id), { title: r.title, time: r.time, days: r.days, enabled: !r.enabled }, { preserveScroll: true });
+    const data = { title: r.title, time: r.time, days: r.days, enabled: !r.enabled };
+    write('update', r.id, data, (extra) => router.patch(route('reminders.update', r.id), data, { preserveScroll: true, ...extra }));
 };
 </script>
 
@@ -61,8 +80,8 @@ const toggleEnabled = (r) => {
                 se agrega más adelante; por ahora quedan guardados y configurables.)
             </p>
 
-            <div v-if="reminders.length" class="space-y-2">
-                <div v-for="r in reminders" :key="r.id"
+            <div v-if="shown.length" class="space-y-2">
+                <div v-for="r in shown" :key="r.id"
                     class="flex items-center gap-3 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4"
                     :class="!r.enabled ? 'opacity-60' : ''">
                     <span class="grid place-items-center h-11 w-11 rounded-full bg-primary/10 text-primary shrink-0"><IconBell :size="22" /></span>

@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Actions\BudgetActions;
 use App\Models\Budget;
 use App\Models\Currency;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class BudgetController extends Controller
@@ -62,32 +62,18 @@ class BudgetController extends Controller
         ]);
     }
 
-    public function store(Request $request)
+    public function store(Request $request, BudgetActions $actions)
     {
-        /** @var \App\Models\User $user */
-        $user = Auth::user();
-
-        $data = $request->validate([
-            'category_id' => [
-                'nullable',
-                Rule::exists('categories', 'id')->where('user_id', $user->id)->where('type', 'expense'),
-            ],
-            'amount' => ['required', 'numeric', 'gt:0'],
-        ]);
-
-        $user->budgets()->updateOrCreate(
-            ['category_id' => $data['category_id'] ?? null],
-            ['amount' => $data['amount'], 'currency_code' => $user->default_currency ?: 'ARS', 'period' => 'monthly'],
-        );
+        $actions->create(Auth::user(), $request->all());
 
         return back()->with('success', 'Presupuesto guardado.');
     }
 
-    public function destroy(Budget $budget)
+    public function destroy(Budget $budget, BudgetActions $actions)
     {
         abort_unless($budget->user_id === Auth::id(), 403);
 
-        $budget->delete();
+        $actions->delete(Auth::user(), $budget);
 
         return back()->with('success', 'Presupuesto eliminado.');
     }
