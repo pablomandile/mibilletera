@@ -15,7 +15,7 @@
 // Subí este número cada vez que cambien los íconos o el manifest: al activarse,
 // el SW borra las caches con otro nombre y así se tiran los archivos viejos.
 const CACHE = 'mibilletera-v4';
-const DATA_CACHE = 'mibilletera-data-v1';
+const DATA_CACHE = 'mibilletera-data-v2';
 const KEEP = [CACHE, DATA_CACHE];
 
 // Pantalla a la que se cae si se navega sin red a una URL que nunca se guardó.
@@ -114,6 +114,12 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
+    // La descarga de datos personales ("Descargar mis datos") no se guarda nunca:
+    // es todo el contenido de la cuenta y no es una pantalla.
+    if (new URL(request.url).pathname.startsWith('/exportacion/')) {
+        return;
+    }
+
     // /build/ (salvo el manifest, que tiene URL fija): los nombres llevan hash de
     // contenido, así que un archivo dado nunca cambia y se sirve de caché.
     //
@@ -207,8 +213,11 @@ async function inertiaData(request, clientId) {
         const resp = await fetch(request);
 
         // Solo páginas Inertia completas (200 con el header). Un 409 de versión,
-        // un 302 al login o un error del server no son "la pantalla".
-        if (resp.status === 200 && resp.headers.get('x-inertia')) {
+        // un 302 al login o un error del server no son "la pantalla". Tampoco un
+        // 200 al que se llegó por un redirect: `fetch` sigue el 302 y entrega la
+        // pantalla de destino (p. ej. «Aceptar términos») como si fuera la pedida,
+        // y sin conexión el inicio mostraría eso.
+        if (resp.status === 200 && !resp.redirected && resp.headers.get('x-inertia')) {
             const headers = new Headers(resp.headers);
             headers.set('X-Cached-At', new Date().toISOString());
             const body = await resp.clone().blob();

@@ -5,6 +5,7 @@ defineProps({
 </script>
 
 <template>
+    <div>
     <a
         :href="route('google.redirect')"
         class="flex w-full items-center justify-center gap-3 rounded-lg border border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 px-4 py-2.5 text-sm font-medium text-surface-700 dark:text-surface-100 hover:bg-surface-50 dark:hover:bg-surface-700 transition-colors"
@@ -17,4 +18,13 @@ defineProps({
         </svg>
         {{ label }}
     </a>
+    <!-- El alta con Google no pasa por la casilla: la pantalla «Aceptar y
+         continuar» frena la cuenta nueva en su primer pedido. -->
+    <p class="mt-2 text-center text-xs text-surface-500">
+        Si es tu primera vez, te vamos a pedir que aceptes los
+        <a href="/terminos" target="_blank" class="underline underline-offset-4 hover:text-primary">términos</a>
+        y la
+        <a href="/privacidad" target="_blank" class="underline underline-offset-4 hover:text-primary">política de privacidad</a>.
+    </p>
+    </div>
 </template>

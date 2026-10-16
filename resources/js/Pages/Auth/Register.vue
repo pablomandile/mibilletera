@@ -8,6 +8,7 @@ const form = useForm({
     email: '',
     password: '',
     password_confirmation: '',
+    terminos: false,
 });
 
 const inputClass =
@@ -60,6 +61,24 @@ const submit = () => {
                 <label for="password_confirmation" class="text-sm font-medium text-surface-700 dark:text-surface-200">Confirmar contraseña</label>
                 <input id="password_confirmation" type="password" :class="inputClass" v-model="form.password_confirmation" required autocomplete="new-password" />
                 <p v-if="form.errors.password_confirmation" class="mt-1 text-sm text-rose-500">{{ form.errors.password_confirmation }}</p>
+            </div>
+
+            <div>
+                <label class="flex min-h-11 cursor-pointer items-start gap-3 text-sm text-surface-600 dark:text-surface-300">
+                    <input
+                        v-model="form.terminos"
+                        type="checkbox"
+                        required
+                        class="mt-0.5 h-5 w-5 shrink-0 rounded border-surface-300 dark:border-surface-700 text-primary focus:ring-primary"
+                    />
+                    <span>
+                        Leí y acepto los
+                        <a href="/terminos" target="_blank" class="underline underline-offset-4 hover:text-primary">términos y condiciones</a>
+                        y la
+                        <a href="/privacidad" target="_blank" class="underline underline-offset-4 hover:text-primary">política de privacidad</a>.
+                    </span>
+                </label>
+                <p v-if="form.errors.terminos" class="mt-1 text-sm text-rose-500">{{ form.errors.terminos }}</p>
             </div>
 
             <button

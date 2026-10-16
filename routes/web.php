@@ -7,6 +7,8 @@ use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\ExportController;
+use App\Http\Controllers\Legales\LegalesController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\RecurringTransactionController;
@@ -24,6 +26,18 @@ Route::get('/', function () {
     return Auth::check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
+});
+
+// Textos legales: públicos (los pide el registro y Google) y, con sesión,
+// exentos del middleware AceptoTerminos.
+Route::get('/terminos', [LegalesController::class, 'terminos'])->name('terminos');
+Route::get('/privacidad', [LegalesController::class, 'privacidad'])->name('privacidad');
+Route::inertia('/cookies', 'Cookies')->name('cookies');
+
+Route::middleware('auth')->group(function () {
+    Route::get('/terminos/aceptar', [LegalesController::class, 'aceptar'])->name('terminos.aceptar');
+    Route::post('/terminos/aceptar', [LegalesController::class, 'guardarAceptacion'])->name('terminos.aceptar.store');
+    Route::get('/exportacion/datos', ExportController::class)->name('exportacion.datos');
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {

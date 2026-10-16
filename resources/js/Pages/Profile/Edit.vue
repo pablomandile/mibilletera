@@ -94,10 +94,26 @@ const deleteAccount = () => deleteForm.delete(route('profile.destroy'), {
                 </form>
             </section>
 
+            <!-- Descargar datos (derecho de acceso: lo promete la política de privacidad) -->
+            <section class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-5">
+                <h2 class="font-semibold">Descargar mis datos</h2>
+                <p class="text-sm text-surface-500 mb-4">
+                    Un archivo con tu cuenta, cuentas, categorías, movimientos, presupuestos,
+                    recurrentes y recordatorios.
+                </p>
+                <a
+                    :href="route('exportacion.datos')"
+                    class="inline-flex min-h-11 items-center rounded-lg border border-surface-300 dark:border-surface-700 px-5 py-2 font-medium hover:bg-surface-100 dark:hover:bg-surface-800"
+                >Descargar mis datos</a>
+            </section>
+
             <!-- Eliminar cuenta -->
             <section class="rounded-2xl bg-white dark:bg-surface-900 border border-rose-500/30 p-5">
                 <h2 class="font-semibold text-rose-500">Eliminar cuenta</h2>
-                <p class="text-sm text-surface-500 mb-4">Se borrarán todos tus datos de forma permanente.</p>
+                <p class="text-sm text-surface-500 mb-4">
+                    Se borran en el momento tu cuenta y todo lo que cargaste, con tus fotos. No se puede deshacer.
+                    Más en la <Link href="/privacidad" class="underline">política de privacidad</Link>.
+                </p>
                 <button type="button" class="rounded-lg border border-rose-500/40 text-rose-500 px-5 py-2 font-medium hover:bg-rose-500/10" @click="showDelete = true">Eliminar mi cuenta</button>
             </section>
         </div>

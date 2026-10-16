@@ -166,3 +166,14 @@ El scheduler corre con `php artisan schedule:work` (dev) o un cron con `schedule
 - Montos `decimal(15,2)`; tipos de cambio `decimal(18,8)`.
 - Respuestas de mutación devuelven `back()` con `flash('success', ...)` → toast en el frontend.
 - Íconos y colores viven en la fila de la categoría/cuenta (no hardcodeados en el front).
+
+## Términos, privacidad y cookies
+
+- **Textos:** `resources/legales/terminos.md` y `privacidad.md`, mostrados por `Legales\LegalesController` en `Pages/Legal.vue`. Cada frase tiene que poder señalarse en el código.
+- **Versión:** `config/legales.php`. Subirla vuelve a pedir la aceptación a todos (`AceptoTerminos`, en el grupo `web`; las rutas exentas están en `AceptoTerminos::EXENTAS`). Constancia en `users.terminos_version` / `terminos_aceptados_en`.
+- **Lo que la política promete y el código que lo sostiene:**
+  - «Eliminar mi cuenta borra todo en el acto» → `ProfileController::destroy` (archivos de `transactions/` y `categories/`, sesiones, cascada de FKs). Sin período de gracia.
+  - «Descargar mis datos» → `ExportController`. Si se agrega una tabla con datos del usuario, tiene que entrar ahí.
+  - Terceros: Hostinger, Google (login) y Bunny Fonts (`app.blade.php`). Uno nuevo obliga a actualizar la política y `Pages/Cookies.vue`.
+  Cambiar uno obliga a cambiar el otro y subir la versión.
+- **Cookies:** el aviso es informativo (todo lo que se guarda es necesario). `Pages/Cookies.vue` es el inventario y `AvisoCookiesTest` rompe la suite si el código guarda una clave que no figura ahí. Si entra algo no necesario (analíticas, etc.) hay que pasar a consentimiento previo y subir `VERSION` en `useAvisoCookies.js`.

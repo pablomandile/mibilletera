@@ -61,6 +61,8 @@ export async function warmup(version, { force = false } = {}) {
                 'X-Inertia': 'true',
                 'X-Inertia-Version': version ?? '',
                 'X-Requested-With': 'XMLHttpRequest',
+                // Para que AceptoTerminos conteste 409 sin pisar a dónde vuelve el usuario.
+                'X-Precalentado': '1',
                 Accept: 'text/html, application/xhtml+xml',
             },
         })

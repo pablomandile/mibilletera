@@ -59,7 +59,26 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
             'month_start_day' => 'integer',
+            'terminos_aceptados_en' => 'datetime',
         ];
+    }
+
+    /**
+     * Deja la constancia de haber aceptado los términos y la privacidad vigentes.
+     * Va con forceFill: no son campos que un formulario pueda mandar.
+     */
+    public function aceptarTerminos(): void
+    {
+        $this->forceFill([
+            'terminos_version' => config('legales.version'),
+            'terminos_aceptados_en' => now(),
+        ])->save();
+    }
+
+    public function aceptoTerminosVigentes(): bool
+    {
+        return $this->terminos_version !== null
+            && $this->terminos_version === config('legales.version');
     }
 
     public function isAdmin(): bool

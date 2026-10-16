@@ -15,6 +15,7 @@ import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
     IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle, IconTextSize,
+    IconFileText, IconShieldLock, IconCookie,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -234,6 +235,21 @@ const logout = async () => {
                     <Link href="/about" class="flex items-center gap-3 px-4 py-3.5 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
                         <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconInfoCircle :size="20" :stroke="1.8" /></span>
                         <span class="flex-1 text-sm font-medium">Acerca de</span>
+                        <IconChevronRight :size="18" class="text-surface-400" />
+                    </Link>
+                    <Link href="/terminos" class="flex items-center gap-3 px-4 py-3.5 border-t border-surface-200 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconFileText :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 text-sm font-medium">Términos y condiciones</span>
+                        <IconChevronRight :size="18" class="text-surface-400" />
+                    </Link>
+                    <Link href="/privacidad" class="flex items-center gap-3 px-4 py-3.5 border-t border-surface-200 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconShieldLock :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 text-sm font-medium">Política de privacidad</span>
+                        <IconChevronRight :size="18" class="text-surface-400" />
+                    </Link>
+                    <Link href="/cookies" class="flex items-center gap-3 px-4 py-3.5 border-t border-surface-200 dark:border-surface-800 hover:bg-surface-50 dark:hover:bg-surface-800 transition-colors">
+                        <span class="grid place-items-center h-9 w-9 rounded-lg bg-surface-100 dark:bg-surface-800 text-primary"><IconCookie :size="20" :stroke="1.8" /></span>
+                        <span class="flex-1 text-sm font-medium">Cookies y datos guardados</span>
                         <IconChevronRight :size="18" class="text-surface-400" />
                     </Link>
                 </div>

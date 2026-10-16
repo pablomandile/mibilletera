@@ -1,6 +1,6 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head } from '@inertiajs/vue3';
+import { Head, Link } from '@inertiajs/vue3';
 import { IconMail, IconWorld } from '@tabler/icons-vue';
 
 const EMAIL = 'pablo.mandile@gmail.com';
@@ -51,6 +51,12 @@ const WEBSITE = 'https://bioinfo.pablomandile.com.ar/pablo';
                         </a>
                     </div>
                 </div>
+
+                <p class="mt-6 flex flex-wrap gap-x-5 text-sm text-surface-500">
+                    <Link href="/terminos" class="inline-flex min-h-11 items-center hover:text-primary">Términos y condiciones</Link>
+                    <Link href="/privacidad" class="inline-flex min-h-11 items-center hover:text-primary">Privacidad</Link>
+                    <Link href="/cookies" class="inline-flex min-h-11 items-center hover:text-primary">Cookies</Link>
+                </p>
             </div>
         </div>
     </AppLayout>

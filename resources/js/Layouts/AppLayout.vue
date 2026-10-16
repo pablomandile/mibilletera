@@ -6,6 +6,7 @@ import Toast from 'primevue/toast';
 import NotificationBell from '@/Components/NotificationBell.vue';
 import ThemeToggle from '@/Components/ThemeToggle.vue';
 import ConfirmDialog from '@/Components/ConfirmDialog.vue';
+import AvisoCookies from '@/Components/AvisoCookies.vue';
 import {
     IconHome2,
     IconChartPie,
@@ -231,8 +232,13 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
         </div>
 
         <!-- ===================== Bottom nav (mobile) ===================== -->
+        <!-- El aviso de cookies va adentro del contenedor fijo de la barra, arriba de
+             ella: con su propio bottom-0 la taparía. Desde md no hay barra y se
+             muestra la otra instancia, flotante. -->
+        <div class="md:hidden fixed bottom-0 inset-x-0 z-30">
+        <AvisoCookies variante="apilado" />
         <nav
-            class="md:hidden fixed bottom-0 inset-x-0 z-30 h-16 border-t border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900"
+            class="relative h-16 border-t border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900"
             style="padding-bottom: env(safe-area-inset-bottom);"
         >
             <div class="relative grid grid-cols-5 h-16">
@@ -272,5 +278,10 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
                 </Link>
             </div>
         </nav>
+        </div>
+
+        <div class="hidden md:block">
+            <AvisoCookies variante="flotante" />
+        </div>
     </div>
 </template>
