@@ -4,10 +4,12 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
 import { Head, router } from '@inertiajs/vue3';
 import { formatMoney } from '@/money';
+import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 
 const props = defineProps({
     range: { type: String, default: 'month' },
     periodLabel: { type: String, default: '' },
+    period: { type: Object, default: () => ({ date: null, prev: null, next: null, isCurrent: true }) },
     byCategory: { type: Array, default: () => [] },
     totals: { type: Object, default: () => ({ income: 0, expense: 0 }) },
     trend: { type: Object, default: () => ({ labels: [], expense: [], income: [] }) },
@@ -21,7 +23,11 @@ const ranges = [
     { key: 'month', label: 'Mes' },
     { key: 'year', label: 'Año' },
 ];
-const setRange = (r) => router.get(route('charts.index'), { range: r }, { preserveScroll: true });
+// Al cambiar de rango se queda en el período que se estaba mirando (marzo 2025 → año 2025).
+const setRange = (r) =>
+    router.get(route('charts.index'), { range: r, ...(props.period.isCurrent ? {} : { date: props.period.date }) }, { preserveScroll: true });
+
+const goPeriod = (date) => router.get(route('charts.index'), { range: props.range, date }, { preserveScroll: true });
 
 const totalExpense = computed(() => props.byCategory.reduce((s, c) => s + c.total, 0));
 
@@ -94,8 +100,14 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
 
     <AppLayout>
         <template #header>
-            <div class="w-full max-w-3xl mx-auto">
-                <h1 class="text-base md:text-lg font-semibold text-center">{{ periodLabel }}</h1>
+            <div class="flex items-center justify-between gap-2 w-full max-w-3xl mx-auto">
+                <button type="button" class="shrink-0 grid place-items-center h-9 w-9 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800" aria-label="Período anterior" @click="goPeriod(period.prev)">
+                    <IconChevronLeft :size="20" />
+                </button>
+                <h1 class="min-w-0 text-base md:text-lg font-semibold text-center truncate">{{ periodLabel }}</h1>
+                <button type="button" class="shrink-0 grid place-items-center h-9 w-9 rounded-lg hover:bg-surface-100 dark:hover:bg-surface-800 disabled:opacity-30" aria-label="Período siguiente" :disabled="period.isCurrent" @click="goPeriod(period.next)">
+                    <IconChevronRight :size="20" />
+                </button>
             </div>
         </template>
 

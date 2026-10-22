@@ -79,6 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     // Transacciones
     Route::get('/transactions/create', [TransactionController::class, 'create'])->name('transactions.create');
+    Route::get('/transactions/search', [TransactionController::class, 'search'])->name('transactions.search');
     Route::get('/transactions/{transaction}/edit', [TransactionController::class, 'edit'])->name('transactions.edit');
     Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');
     Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');

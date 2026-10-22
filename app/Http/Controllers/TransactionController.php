@@ -71,6 +71,49 @@ class TransactionController extends Controller
         return back()->with('success', 'Transacción eliminada.');
     }
 
+    /**
+     * Buscar ingresos y gastos por la nota, en todas las fechas.
+     */
+    public function search(Request $request)
+    {
+        /** @var \App\Models\User $user */
+        $user = Auth::user();
+
+        $query = trim((string) $request->query('q', ''));
+        $limit = 200;
+        $results = collect();
+
+        if ($query !== '') {
+            // % y _ son comodines de LIKE: si los escribe el usuario, se buscan literales.
+            // Escape con '!' y no con '\': SQLite no tiene escape por defecto y MySQL
+            // interpreta la barra dentro del literal, así que '\' no sirve en los dos.
+            $like = '%'.str_replace(['!', '%', '_'], ['!!', '!%', '!_'], $query).'%';
+
+            $results = $user->transactions()
+                ->with([
+                    'category:id,name,icon_type,icon_value,color',
+                    'account:id,name',
+                    'toAccount:id,name',
+                ])
+                ->whereIn('type', ['income', 'expense'])
+                ->whereRaw("note like ? escape '!'", [$like])
+                ->orderByDesc('transaction_date')
+                ->orderByDesc('id')
+                ->limit($limit + 1)
+                ->get();
+        }
+
+        $symbols = Currency::pluck('symbol', 'code');
+
+        return Inertia::render('Transactions/Search', [
+            'query' => $query,
+            'transactions' => $results->take($limit)->map->toListItem()->values(),
+            'truncated' => $results->count() > $limit,
+            'baseSymbol' => $symbols[$user->default_currency] ?? '$',
+            'symbols' => $symbols,
+        ]);
+    }
+
     // ----------------------------------------------------------------------
 
     private function formProps(): array

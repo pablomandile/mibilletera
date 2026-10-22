@@ -1,5 +1,5 @@
 <script setup>
-import { computed, watch, onMounted, onUnmounted } from 'vue';
+import { computed, ref, watch, nextTick, onMounted, onUnmounted } from 'vue';
 import { Link, usePage, router } from '@inertiajs/vue3';
 import { useToast } from 'primevue/usetoast';
 import Toast from 'primevue/toast';
@@ -16,6 +16,11 @@ import {
     IconLogout,
     IconInfoCircle,
     IconCloudOff,
+    IconChartHistogram,
+    IconClockDollar,
+    IconBell,
+    IconSearch,
+    IconX,
 } from '@tabler/icons-vue';
 import { offline, cachedAt } from '@/offline/connection';
 import { ops } from '@/offline/outbox';
@@ -41,6 +46,41 @@ const navItems = [
     { label: 'Informes', href: '/reports', icon: IconReportAnalytics },
     { label: 'Ajustes', href: '/settings', icon: IconUser },
 ];
+
+// Solo en la barra lateral: la inferior de mobile no tiene lugar, ahí se llega desde Ajustes.
+const planItems = [
+    { label: 'Presupuestos', href: '/budgets', icon: IconChartHistogram },
+    { label: 'Transacciones recurrentes', href: '/recurring', icon: IconClockDollar },
+    { label: 'Recordatorios', href: '/reminders', icon: IconBell },
+];
+
+// ---- Búsqueda (mobile) ----
+// La lupa del header ocupa el lugar del switch de tema (que sigue en Ajustes) y
+// despliega el campo debajo; otro toque lo oculta.
+const onSearchPage = computed(() => currentUrl.value.split('?')[0] === '/transactions/search');
+const searchOpen = ref(false);
+const searchTerm = ref('');
+const searchInput = ref(null);
+
+const toggleSearch = async () => {
+    // En la pantalla de búsqueda ya hay un campo: la lupa lleva a ese.
+    if (onSearchPage.value) {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        document.querySelector('main [role="search"] input')?.focus();
+        return;
+    }
+    searchOpen.value = !searchOpen.value;
+    if (searchOpen.value) {
+        await nextTick();
+        searchInput.value?.focus();
+    }
+};
+
+const submitSearch = () => {
+    const q = searchTerm.value.trim();
+    if (!q) return;
+    router.get(route('transactions.search'), { q });
+};
 
 const logout = async () => {
     // La cola espera al mismo usuario, pero si cierra sesión sin conexión los
@@ -134,12 +174,38 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
                     {{ item.label }}
                 </Link>
 
+                <!-- Fuera de navItems por lo mismo que Acerca de: en mobile va como lupa en el header. -->
+                <Link
+                    href="/transactions/search"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    :class="onSearchPage
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800'"
+                >
+                    <IconSearch :size="22" :stroke="1.8" />
+                    Buscar
+                </Link>
+
                 <Link
                     href="/transactions/create"
                     class="mt-4 flex items-center justify-center gap-2 px-3 py-3 rounded-xl bg-primary text-primary-contrast font-semibold shadow-sm hover:brightness-95 transition"
                 >
                     <IconPlus :size="20" :stroke="2.4" />
                     Agregar
+                </Link>
+
+                <p class="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wide text-surface-500">Planificación</p>
+                <Link
+                    v-for="item in planItems"
+                    :key="item.href"
+                    :href="item.href"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    :class="isActive(item.href)
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800'"
+                >
+                    <component :is="item.icon" :size="22" :stroke="1.8" />
+                    {{ item.label }}
                 </Link>
             </nav>
 
@@ -192,9 +258,41 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
                         <h1 class="text-base font-semibold truncate">{{ title }}</h1>
                     </slot>
                 </div>
-                <ThemeToggle />
+                <button
+                    type="button"
+                    class="grid place-items-center h-9 w-9 rounded-lg text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800"
+                    :class="searchOpen ? 'bg-primary/10 text-primary' : ''"
+                    :aria-label="searchOpen ? 'Ocultar búsqueda' : 'Buscar'"
+                    :aria-expanded="searchOpen"
+                    aria-controls="mobile-search"
+                    @click="toggleSearch"
+                >
+                    <IconX v-if="searchOpen" :size="22" :stroke="1.8" />
+                    <IconSearch v-else :size="22" :stroke="1.8" />
+                </button>
                 <NotificationBell />
             </header>
+
+            <form
+                v-if="searchOpen"
+                id="mobile-search"
+                role="search"
+                class="md:hidden sticky top-14 z-20 px-4 py-2 border-b border-surface-200 dark:border-surface-800 bg-white/90 dark:bg-surface-900/90 backdrop-blur"
+                @submit.prevent="submitSearch"
+            >
+                <div class="relative">
+                    <IconSearch :size="18" class="absolute left-3 top-1/2 -translate-y-1/2 text-surface-400 pointer-events-none" />
+                    <input
+                        ref="searchInput"
+                        v-model="searchTerm"
+                        type="search"
+                        enterkeyhint="search"
+                        placeholder="Buscar en las notas"
+                        aria-label="Buscar en las notas de ingresos y gastos"
+                        class="w-full rounded-xl border border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 pl-9 pr-3 py-2 text-sm focus:border-primary focus:ring-primary"
+                    />
+                </div>
+            </form>
 
             <!-- Header desktop -->
             <header

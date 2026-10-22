@@ -19,11 +19,31 @@ class ChartsController extends Controller
             ? $request->query('range')
             : 'month';
 
-        $now = now();
+        // Cualquier día del período a mostrar; las flechas mandan el inicio del anterior
+        // o del siguiente. Sin fecha, inválida o futura: el período actual.
+        $anchor = now();
+        $date = $request->query('date');
+        if (is_string($date) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+            try {
+                $parsed = Carbon::createFromFormat('!Y-m-d', $date);
+                if ($parsed->format('Y-m-d') === $date && $parsed->lte(now())) {
+                    $anchor = $parsed;
+                }
+            } catch (\Throwable) {
+                // fecha imposible: queda el período actual
+            }
+        }
+
         [$start, $end, $bucket] = match ($range) {
-            'week' => [$now->copy()->startOfWeek(), $now->copy()->endOfWeek(), 'day'],
-            'year' => [$now->copy()->startOfYear(), $now->copy()->endOfYear(), 'month'],
-            default => [$now->copy()->startOfMonth(), $now->copy()->endOfMonth(), 'day'],
+            'week' => [$anchor->copy()->startOfWeek(), $anchor->copy()->endOfWeek(), 'day'],
+            'year' => [$anchor->copy()->startOfYear(), $anchor->copy()->endOfYear(), 'month'],
+            default => [$anchor->copy()->startOfMonth(), $anchor->copy()->endOfMonth(), 'day'],
+        };
+
+        [$prev, $next] = match ($range) {
+            'week' => [$start->copy()->subWeek(), $start->copy()->addWeek()],
+            'year' => [$start->copy()->subYear(), $start->copy()->addYear()],
+            default => [$start->copy()->subMonth(), $start->copy()->addMonth()],
         };
 
         $transactions = $user->transactions()
@@ -75,6 +95,12 @@ class ChartsController extends Controller
         return Inertia::render('Charts/Index', [
             'range' => $range,
             'periodLabel' => $this->periodLabel($range, $start, $end),
+            'period' => [
+                'date' => $start->format('Y-m-d'),
+                'prev' => $prev->format('Y-m-d'),
+                'next' => $next->format('Y-m-d'),
+                'isCurrent' => $end->gte(now()),
+            ],
             'byCategory' => $byCategory,
             'totals' => [
                 'income' => (float) $incomes->sum($base),

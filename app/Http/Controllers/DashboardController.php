@@ -60,31 +60,7 @@ class DashboardController extends Controller
             : $transactions;
 
         return Inertia::render('Dashboard', [
-            'transactions' => $visible->map(fn ($t) => [
-                'id' => $t->id,
-                'type' => $t->type,
-                'amount' => (float) $t->amount,
-                'currency_code' => $t->currency_code,
-                'note' => $t->note,
-                'date' => $t->transaction_date->format('Y-m-d'),
-                'category' => $t->category ? [
-                    'name' => $t->category->name,
-                    'icon_type' => $t->category->icon_type,
-                    'icon_value' => $t->category->icon_value,
-                    'icon_url' => $t->category->icon_url,
-                    'color' => $t->category->color,
-                ] : null,
-                'from_account' => $t->account?->name,
-                'to_account' => $t->toAccount?->name,
-                'transfer_amount' => $t->transfer_amount !== null ? (float) $t->transfer_amount : null,
-                'transfer_currency' => $t->transfer_currency,
-                // Para poder abrir la edición sin conexión, armada desde esta fila.
-                'account_id' => $t->account_id,
-                'to_account_id' => $t->to_account_id,
-                'category_id' => $t->category_id,
-                'exchange_rate' => (float) $t->exchange_rate,
-                'photo_url' => $t->photo_url,
-            ]),
+            'transactions' => $visible->map->toListItem(),
             'period' => [
                 'month' => $date->format('Y-m'),
                 'label' => ucfirst($date->translatedFormat('F Y')),
