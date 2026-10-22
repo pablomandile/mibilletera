@@ -5,6 +5,7 @@ namespace App\Console\Commands;
 use Database\Seeders\CurrencySeeder;
 use Database\Seeders\DemoSeeder;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Vacía la base y vuelve a sembrar la demo. Corre todas las noches en la copia
@@ -26,6 +27,12 @@ class DemoReset extends Command
         }
 
         $this->call('migrate:fresh', ['--force' => true]);
+
+        // Lo que subieron los visitantes (íconos de categorías y fotos de comprobantes).
+        foreach (['categories', 'transactions'] as $dir) {
+            Storage::disk('public')->deleteDirectory($dir);
+        }
+
         $this->call('db:seed', ['--class' => CurrencySeeder::class, '--force' => true]);
         $this->call('db:seed', ['--class' => DemoSeeder::class, '--force' => true]);
 
