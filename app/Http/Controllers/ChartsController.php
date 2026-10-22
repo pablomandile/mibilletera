@@ -102,20 +102,36 @@ class ChartsController extends Controller
         // anterior. Los meses que todavía no llegaron van en null, así la línea
         // del año en curso se corta en vez de caer a cero.
         $year = (int) $start->format('Y');
-        $yearExpenses = $user->transactions()
-            ->where('type', 'expense')
+        $yearTotals = $user->transactions()
+            ->whereIn('type', ['expense', 'income'])
             ->whereBetween('transaction_date', [Carbon::create($year - 1)->startOfYear(), Carbon::create($year)->endOfYear()])
-            ->get(['amount', 'exchange_rate', 'transaction_date'])
-            ->groupBy(fn ($t) => $t->transaction_date->format('Y-n'))
+            ->get(['type', 'amount', 'exchange_rate', 'transaction_date'])
+            ->groupBy(fn ($t) => $t->type.'-'.$t->transaction_date->format('Y-n'))
             ->map(fn ($group) => (float) $group->sum($base));
 
+        // Ahorro: lo que sobra cada mes (ingresos − gastos; un mes en rojo cuenta 0)
+        // y su acumulado desde enero.
         $yearly = ['labels' => [], 'current' => [], 'previous' => [], 'year' => $year];
+        $savings = ['monthly' => [], 'accumulated' => []];
+        $accumulated = 0.0;
         for ($m = 1; $m <= 12; $m++) {
             $yearly['labels'][] = Carbon::create()->month($m)->translatedFormat('M');
-            $yearly['previous'][] = $yearExpenses->get(($year - 1).'-'.$m, 0.0);
-            $yearly['current'][] = Carbon::create($year, $m, 1)->lte(now())
-                ? $yearExpenses->get($year.'-'.$m, 0.0)
-                : null;
+            $yearly['previous'][] = $yearTotals->get('expense-'.($year - 1).'-'.$m, 0.0);
+
+            if (Carbon::create($year, $m, 1)->gt(now())) {
+                $yearly['current'][] = null;
+                $savings['monthly'][] = null;
+                $savings['accumulated'][] = null;
+                continue;
+            }
+
+            $expense = $yearTotals->get("expense-$year-$m", 0.0);
+            $saved = max($yearTotals->get("income-$year-$m", 0.0) - $expense, 0.0);
+            $accumulated += $saved;
+
+            $yearly['current'][] = $expense;
+            $savings['monthly'][] = $saved;
+            $savings['accumulated'][] = $accumulated;
         }
 
         return Inertia::render('Charts/Index', [
@@ -140,6 +156,7 @@ class ChartsController extends Controller
                 'income' => $incomeSeries,
             ],
             'yearly' => $yearly,
+            'savings' => $savings,
             'currencySymbol' => Currency::find($user->default_currency)?->symbol ?? '$',
         ]);
     }

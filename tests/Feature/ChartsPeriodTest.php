@@ -116,4 +116,36 @@ class ChartsPeriodTest extends TestCase
                 ->where('yearly.current.9', 0)
                 ->where('yearly.current.10', null));
     }
+
+    public function test_savings_accumulate_only_positive_monthly_balances(): void
+    {
+        $user = User::factory()->create();
+        $income = fn (float $amount, string $date) => $user->transactions()->create([
+            'account_id' => $user->accounts()->first()->id,
+            'category_id' => $user->categories()->where('type', 'income')->first()->id,
+            'type' => 'income',
+            'amount' => $amount,
+            'currency_code' => 'ARS',
+            'exchange_rate' => 1,
+            'transaction_date' => $date,
+        ]);
+
+        $income(1000, '2026-01-05');
+        $this->expense($user, 400, '2026-01-20');   // enero ahorra 600
+        $income(100, '2026-02-05');
+        $this->expense($user, 300, '2026-02-20');   // febrero en rojo: 0
+        $income(500, '2026-03-05');                 // marzo ahorra 500
+
+        $this->actingAs($user)
+            ->get('/charts?range=year&date=2026-01-01')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('savings.monthly.0', 600)
+                ->where('savings.monthly.1', 0)
+                ->where('savings.monthly.2', 500)
+                ->where('savings.accumulated.0', 600)
+                ->where('savings.accumulated.1', 600)
+                ->where('savings.accumulated.2', 1100)
+                ->where('savings.accumulated.9', 1100)
+                ->where('savings.accumulated.10', null));
+    }
 }

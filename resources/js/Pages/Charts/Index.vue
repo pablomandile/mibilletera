@@ -16,6 +16,7 @@ const props = defineProps({
     totals: { type: Object, default: () => ({ income: 0, expense: 0 }) },
     trend: { type: Object, default: () => ({ labels: [], expense: [], income: [] }) },
     yearly: { type: Object, default: () => ({ labels: [], current: [], previous: [], year: null }) },
+    savings: { type: Object, default: () => ({ monthly: [], accumulated: [] }) },
     currencySymbol: { type: String, default: '$' },
 });
 
@@ -119,6 +120,32 @@ const yearlyData = computed(() => ({
 }));
 const sum = (values) => values.reduce((s, v) => s + (v ?? 0), 0);
 const yearlyTotal = computed(() => sum(props.yearly.current));
+
+// Ahorro: barras con lo que sobró cada mes y línea con el acumulado del año.
+const savingsData = computed(() => ({
+    labels: props.yearly.labels,
+    datasets: [
+        {
+            type: 'line',
+            label: 'Acumulado',
+            data: props.savings.accumulated,
+            borderColor: '#0ea5e9',
+            backgroundColor: '#0ea5e9',
+            tension: 0.35,
+            pointRadius: 3,
+            order: 0,
+        },
+        {
+            type: 'bar',
+            label: 'Del mes',
+            data: props.savings.monthly,
+            backgroundColor: 'rgba(34,197,94,0.55)',
+            borderRadius: 4,
+            order: 1,
+        },
+    ],
+}));
+const savingsTotal = computed(() => sum(props.savings.monthly));
 
 const tick = '#a1a1aa';
 const grid = 'rgba(148,163,184,0.15)';
@@ -285,6 +312,18 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                 </div>
                 <div class="h-56">
                     <Chart type="line" :data="yearlyData" :options="yearlyOptions" class="h-56" />
+                </div>
+            </div>
+
+            <!-- Ahorro acumulado del año -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <h2 class="font-semibold">Ahorro acumulado {{ yearly.year }}</h2>
+                    <span class="text-sm font-semibold whitespace-nowrap tabular-nums text-sky-500">{{ money(savingsTotal) }}</span>
+                </div>
+                <p class="text-xs text-surface-500 mb-3">Lo que sobra cada mes entre ingresos y gastos. Un mes en rojo suma 0.</p>
+                <div class="h-56">
+                    <Chart type="bar" :data="savingsData" :options="yearlyOptions" class="h-56" />
                 </div>
             </div>
 
