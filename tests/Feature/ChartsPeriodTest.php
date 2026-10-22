@@ -95,4 +95,25 @@ class ChartsPeriodTest extends TestCase
                 ->where('period.prev', '2024-01-01')
                 ->where('period.isCurrent', false));
     }
+
+    public function test_yearly_trend_compares_months_with_previous_year(): void
+    {
+        $user = User::factory()->create();
+        $this->expense($user, 300, '2026-03-10');
+        $this->expense($user, 200, '2026-03-25');
+        $this->expense($user, 700, '2025-03-05');
+        $this->expense($user, 50, '2024-03-05');
+
+        $this->actingAs($user)
+            ->get('/charts?range=month&date=2026-03-01')
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('yearly.year', 2026)
+                ->has('yearly.labels', 12)
+                ->where('yearly.current.2', 500)
+                ->where('yearly.previous.2', 700)
+                ->where('yearly.current.0', 0)
+                // Hoy es 21/10/2026: noviembre todavía no llegó.
+                ->where('yearly.current.9', 0)
+                ->where('yearly.current.10', null));
+    }
 }

@@ -15,6 +15,7 @@ const props = defineProps({
     hasSupercategories: { type: Boolean, default: false },
     totals: { type: Object, default: () => ({ income: 0, expense: 0 }) },
     trend: { type: Object, default: () => ({ labels: [], expense: [], income: [] }) },
+    yearly: { type: Object, default: () => ({ labels: [], current: [], previous: [], year: null }) },
     currencySymbol: { type: String, default: '$' },
 });
 
@@ -93,6 +94,32 @@ const lineData = computed(() => ({
     ],
 }));
 
+// Gasto de cada mes del año del período, contra el año anterior.
+const yearlyData = computed(() => ({
+    labels: props.yearly.labels,
+    datasets: [
+        {
+            label: String(props.yearly.year),
+            data: props.yearly.current,
+            borderColor: '#f43f5e',
+            backgroundColor: 'rgba(244,63,94,0.12)',
+            tension: 0.35,
+            fill: true,
+            pointRadius: 3,
+        },
+        {
+            label: String(props.yearly.year - 1),
+            data: props.yearly.previous,
+            borderColor: '#a1a1aa',
+            borderDash: [5, 4],
+            tension: 0.35,
+            pointRadius: 2,
+        },
+    ],
+}));
+const sum = (values) => values.reduce((s, v) => s + (v ?? 0), 0);
+const yearlyTotal = computed(() => sum(props.yearly.current));
+
 const tick = '#a1a1aa';
 const grid = 'rgba(148,163,184,0.15)';
 const baseOptions = {
@@ -122,6 +149,14 @@ const totalsOptions = {
     scales: {
         x: { ticks: { color: tick }, grid: { color: grid }, beginAtZero: true },
         y: { ticks: { color: tick }, grid: { display: false } },
+    },
+};
+
+const yearlyOptions = {
+    ...axisOptions,
+    plugins: {
+        ...baseOptions.plugins,
+        tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y)}` } },
     },
 };
 
@@ -239,6 +274,17 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                 <h2 class="font-semibold mb-3">Tendencia de gasto</h2>
                 <div class="h-56">
                     <Chart type="line" :data="lineData" :options="axisOptions" class="h-56" />
+                </div>
+            </div>
+
+            <!-- Línea: tendencia anual de gastos, contra el año anterior -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold">Tendencia anual de gastos</h2>
+                    <span class="text-sm font-semibold whitespace-nowrap tabular-nums text-rose-500">{{ money(yearlyTotal) }}</span>
+                </div>
+                <div class="h-56">
+                    <Chart type="line" :data="yearlyData" :options="yearlyOptions" class="h-56" />
                 </div>
             </div>
 

@@ -98,6 +98,26 @@ class ChartsController extends Controller
             }
         }
 
+        // Tendencia anual: gasto de cada mes del año del período contra el año
+        // anterior. Los meses que todavía no llegaron van en null, así la línea
+        // del año en curso se corta en vez de caer a cero.
+        $year = (int) $start->format('Y');
+        $yearExpenses = $user->transactions()
+            ->where('type', 'expense')
+            ->whereBetween('transaction_date', [Carbon::create($year - 1)->startOfYear(), Carbon::create($year)->endOfYear()])
+            ->get(['amount', 'exchange_rate', 'transaction_date'])
+            ->groupBy(fn ($t) => $t->transaction_date->format('Y-n'))
+            ->map(fn ($group) => (float) $group->sum($base));
+
+        $yearly = ['labels' => [], 'current' => [], 'previous' => [], 'year' => $year];
+        for ($m = 1; $m <= 12; $m++) {
+            $yearly['labels'][] = Carbon::create()->month($m)->translatedFormat('M');
+            $yearly['previous'][] = $yearExpenses->get(($year - 1).'-'.$m, 0.0);
+            $yearly['current'][] = Carbon::create($year, $m, 1)->lte(now())
+                ? $yearExpenses->get($year.'-'.$m, 0.0)
+                : null;
+        }
+
         return Inertia::render('Charts/Index', [
             'range' => $range,
             'periodLabel' => $this->periodLabel($range, $start, $end),
@@ -119,6 +139,7 @@ class ChartsController extends Controller
                 'expense' => $expenseSeries,
                 'income' => $incomeSeries,
             ],
+            'yearly' => $yearly,
             'currencySymbol' => Currency::find($user->default_currency)?->symbol ?? '$',
         ]);
     }
