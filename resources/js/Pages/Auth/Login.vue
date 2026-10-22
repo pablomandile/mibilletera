@@ -1,7 +1,7 @@
 <script setup>
 import GuestLayout from '@/Layouts/GuestLayout.vue';
 import GoogleButton from '@/Components/GoogleButton.vue';
-import { Head, Link, useForm } from '@inertiajs/vue3';
+import { Head, Link, useForm, usePage } from '@inertiajs/vue3';
 
 defineProps({
     canResetPassword: { type: Boolean },
@@ -22,6 +22,14 @@ const submit = () => {
         onFinish: () => form.reset('password'),
     });
 };
+
+// En la demo (APP_DEMO=true) se entra con un usuario compartido.
+const demo = usePage().props.demo;
+const enterDemo = () => {
+    form.email = demo.email;
+    form.password = demo.password;
+    submit();
+};
 </script>
 
 <template>
@@ -35,13 +43,43 @@ const submit = () => {
             {{ status }}
         </div>
 
-        <div class="mt-5">
-            <GoogleButton label="Iniciar sesión con Google" />
+        <div v-if="demo" class="mt-5 rounded-xl border border-primary/30 bg-primary/5 p-4">
+            <p class="font-semibold text-surface-900 dark:text-surface-100">Probá la demo</p>
+            <p class="mt-1 text-sm text-surface-500">
+                Un año de movimientos de ejemplo para recorrer gráficos, informes y presupuestos.
+                Se reinicia todas las noches.
+            </p>
+            <dl class="mt-3 grid grid-cols-[auto_1fr] gap-x-3 gap-y-1 text-sm">
+                <dt class="text-surface-500">Email</dt>
+                <dd class="font-medium break-all">{{ demo.email }}</dd>
+                <dt class="text-surface-500">Contraseña</dt>
+                <dd class="font-medium">{{ demo.password }}</dd>
+            </dl>
+            <button
+                type="button"
+                class="mt-4 w-full rounded-lg bg-primary py-2.5 font-semibold text-primary-contrast hover:brightness-95 transition disabled:opacity-50"
+                :disabled="form.processing"
+                @click="enterDemo"
+            >
+                Entrar a la demo
+            </button>
         </div>
 
-        <div class="my-5 flex items-center gap-3 text-xs text-surface-400">
+        <template v-else>
+            <div class="mt-5">
+                <GoogleButton label="Iniciar sesión con Google" />
+            </div>
+
+            <div class="my-5 flex items-center gap-3 text-xs text-surface-400">
+                <span class="h-px flex-1 bg-surface-200 dark:bg-surface-800"></span>
+                o con tu email
+                <span class="h-px flex-1 bg-surface-200 dark:bg-surface-800"></span>
+            </div>
+        </template>
+
+        <div v-if="demo" class="my-5 flex items-center gap-3 text-xs text-surface-400">
             <span class="h-px flex-1 bg-surface-200 dark:bg-surface-800"></span>
-            o con tu email
+            o a mano
             <span class="h-px flex-1 bg-surface-200 dark:bg-surface-800"></span>
         </div>
 
@@ -90,7 +128,7 @@ const submit = () => {
                 Iniciar sesión
             </button>
 
-            <div class="flex items-center justify-between text-sm">
+            <div v-if="!demo" class="flex items-center justify-between text-sm">
                 <Link
                     v-if="canResetPassword"
                     :href="route('password.request')"

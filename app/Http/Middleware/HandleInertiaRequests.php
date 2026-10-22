@@ -69,8 +69,13 @@ class HandleInertiaRequests extends Middleware
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),
+                'error' => fn () => $request->session()->get('error'),
                 'created_category_id' => fn () => $request->session()->get('created_category_id'),
             ],
+            // Datos de acceso de la demo (solo con APP_DEMO=true), para el login.
+            'demo' => config('demo.enabled')
+                ? ['email' => config('demo.email'), 'password' => config('demo.password')]
+                : null,
             'notifications' => function () use ($request) {
                 $user = $request->user();
                 if (! $user) {

@@ -10,6 +10,8 @@ defineProps({
 
 const page = usePage();
 const user = computed(() => page.props.auth.user);
+// En la demo la cuenta es compartida: no se puede cambiar ni borrar (ver ProtegerDemo).
+const demo = computed(() => page.props.demo);
 
 const inputClass = 'mt-1 block w-full rounded-lg border-surface-300 dark:border-surface-700 bg-white dark:bg-surface-800 text-surface-900 dark:text-surface-100 focus:border-primary focus:ring-primary';
 
@@ -40,8 +42,17 @@ const deleteAccount = () => deleteForm.delete(route('profile.destroy'), {
 
     <AppLayout title="Perfil">
         <div class="mx-auto max-w-2xl space-y-5">
+            <section v-if="demo" class="rounded-2xl border border-primary/30 bg-primary/5 p-5">
+                <h2 class="font-semibold">Cuenta de demostración</h2>
+                <p class="text-sm text-surface-500 mt-1">
+                    Esta cuenta la comparten todos los que prueban la demo, así que no se puede cambiar
+                    el email ni la contraseña, ni eliminarla. Los movimientos sí: cargá, editá y borrá lo
+                    que quieras. Todo vuelve a como estaba cada noche.
+                </p>
+            </section>
+
             <!-- Datos -->
-            <section class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-5">
+            <section v-if="!demo" class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-5">
                 <h2 class="font-semibold">Información del perfil</h2>
                 <p class="text-sm text-surface-500 mb-4">Actualizá tu nombre y correo.</p>
 
@@ -66,7 +77,7 @@ const deleteAccount = () => deleteForm.delete(route('profile.destroy'), {
             </section>
 
             <!-- Contraseña -->
-            <section class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-5">
+            <section v-if="!demo" class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-5">
                 <h2 class="font-semibold">Contraseña</h2>
                 <p class="text-sm text-surface-500 mb-4">Usá una contraseña larga y segura.</p>
 
@@ -108,7 +119,7 @@ const deleteAccount = () => deleteForm.delete(route('profile.destroy'), {
             </section>
 
             <!-- Eliminar cuenta -->
-            <section class="rounded-2xl bg-white dark:bg-surface-900 border border-rose-500/30 p-5">
+            <section v-if="!demo" class="rounded-2xl bg-white dark:bg-surface-900 border border-rose-500/30 p-5">
                 <h2 class="font-semibold text-rose-500">Eliminar cuenta</h2>
                 <p class="text-sm text-surface-500 mb-4">
                     Se borran en el momento tu cuenta y todo lo que cargaste, con tus fotos. No se puede deshacer.

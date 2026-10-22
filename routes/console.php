@@ -14,3 +14,6 @@ Schedule::command('recurring:run')->dailyAt('00:05');
 
 // Genera las alertas de recordatorios (campanita) cada minuto.
 Schedule::command('reminders:dispatch')->everyMinute();
+
+// Solo en la demo (APP_DEMO=true): vuelve a dejarla como nueva todas las noches.
+Schedule::command('demo:reset')->dailyAt('04:00')->when(fn () => config('demo.enabled'));

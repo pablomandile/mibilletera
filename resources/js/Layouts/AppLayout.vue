@@ -102,6 +102,10 @@ watch(
     () => page.props.flash?.success,
     (msg) => { if (msg) toast.add({ severity: 'success', summary: msg, life: 2500 }); }
 );
+watch(
+    () => page.props.flash?.error,
+    (msg) => { if (msg) toast.add({ severity: 'warn', summary: msg, life: 4000 }); }
+);
 
 // ---- Sin conexión ----
 // Avisos de la sincronización y de pantallas sin AppLayout (ver offline/notices).
