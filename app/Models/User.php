@@ -96,6 +96,11 @@ class User extends Authenticatable
         return $this->hasMany(Category::class);
     }
 
+    public function supercategories(): HasMany
+    {
+        return $this->hasMany(Supercategory::class);
+    }
+
     public function transactions(): HasMany
     {
         return $this->hasMany(Transaction::class);

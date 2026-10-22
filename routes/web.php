@@ -15,6 +15,7 @@ use App\Http\Controllers\RecurringTransactionController;
 use App\Http\Controllers\ReminderController;
 use App\Http\Controllers\ReportsController;
 use App\Http\Controllers\SyncController;
+use App\Http\Controllers\SupercategoryController;
 use App\Http\Controllers\TransactionController;
 use App\Http\Controllers\ProfileController;
 use App\Models\Currency;
@@ -50,6 +51,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');
     Route::post('/budgets', [BudgetController::class, 'store'])->name('budgets.store');
     Route::delete('/budgets/{budget}', [BudgetController::class, 'destroy'])->name('budgets.destroy');
+
+    Route::get('/supercategories', [SupercategoryController::class, 'index'])->name('supercategories.index');
+    Route::post('/supercategories', [SupercategoryController::class, 'store'])->name('supercategories.store');
+    Route::patch('/supercategories/{supercategory}', [SupercategoryController::class, 'update'])->name('supercategories.update');
+    Route::delete('/supercategories/{supercategory}', [SupercategoryController::class, 'destroy'])->name('supercategories.destroy');
 
     // Transacciones recurrentes
     Route::get('/recurring', [RecurringTransactionController::class, 'index'])->name('recurring.index');

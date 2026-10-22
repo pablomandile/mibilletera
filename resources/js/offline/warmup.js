@@ -14,6 +14,7 @@ const PAGES = [
     '/transactions/create',
     '/accounts',
     '/categories',
+    '/supercategories',
     '/budgets',
     '/recurring',
     '/reminders',

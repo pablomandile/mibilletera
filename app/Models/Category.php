@@ -10,7 +10,7 @@ use Illuminate\Support\Facades\Storage;
 class Category extends Model
 {
     protected $fillable = [
-        'user_id', 'parent_id', 'type', 'name',
+        'user_id', 'parent_id', 'supercategory_id', 'type', 'name',
         'icon_type', 'icon_value', 'color', 'sort_order', 'is_system',
     ];
 
@@ -29,6 +29,11 @@ class Category extends Model
     public function parent(): BelongsTo
     {
         return $this->belongsTo(Category::class, 'parent_id');
+    }
+
+    public function supercategory(): BelongsTo
+    {
+        return $this->belongsTo(Supercategory::class);
     }
 
     public function children(): HasMany

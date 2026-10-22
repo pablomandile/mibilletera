@@ -2,7 +2,7 @@
 import { computed } from 'vue';
 import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
 import { formatMoney } from '@/money';
 import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
 
@@ -11,6 +11,8 @@ const props = defineProps({
     periodLabel: { type: String, default: '' },
     period: { type: Object, default: () => ({ date: null, prev: null, next: null, isCurrent: true }) },
     byCategory: { type: Array, default: () => [] },
+    bySupercategory: { type: Array, default: () => [] },
+    hasSupercategories: { type: Boolean, default: false },
     totals: { type: Object, default: () => ({ income: 0, expense: 0 }) },
     trend: { type: Object, default: () => ({ labels: [], expense: [], income: [] }) },
     currencySymbol: { type: String, default: '$' },
@@ -31,24 +33,27 @@ const goPeriod = (date) => router.get(route('charts.index'), { range: props.rang
 
 const totalExpense = computed(() => props.byCategory.reduce((s, c) => s + c.total, 0));
 
-const withPct = computed(() =>
-    props.byCategory.map((c) => ({
+const addPct = (slices) =>
+    slices.map((c) => ({
         ...c,
         pct: totalExpense.value ? Math.round((c.total / totalExpense.value) * 1000) / 10 : 0,
-    }))
-);
+    }));
+const withPct = computed(() => addPct(props.byCategory));
+const superWithPct = computed(() => addPct(props.bySupercategory));
 
 // ---- Datos de los gráficos ----
-const doughnutData = computed(() => ({
-    labels: props.byCategory.map((c) => c.name),
+const toDoughnut = (slices) => ({
+    labels: slices.map((c) => c.name),
     datasets: [
         {
-            data: props.byCategory.map((c) => c.total),
-            backgroundColor: props.byCategory.map((c) => c.color),
+            data: slices.map((c) => c.total),
+            backgroundColor: slices.map((c) => c.color),
             borderWidth: 0,
         },
     ],
-}));
+});
+const doughnutData = computed(() => toDoughnut(props.byCategory));
+const superDoughnutData = computed(() => toDoughnut(props.bySupercategory));
 
 const barData = computed(() => ({
     labels: props.trend.labels,
@@ -139,6 +144,36 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
                     </div>
                     <div class="space-y-2 max-h-56 overflow-y-auto">
                         <div v-for="c in withPct" :key="c.name" class="flex items-center gap-2 text-sm">
+                            <span class="h-3 w-3 rounded-full shrink-0" :style="{ backgroundColor: c.color }"></span>
+                            <span class="flex-1 min-w-0 break-words hyphens-auto">{{ c.name }}</span>
+                            <span class="shrink-0 text-surface-500">{{ c.pct }}%</span>
+                            <span class="shrink-0 whitespace-nowrap font-medium tabular-nums min-w-24 text-right">{{ money(c.total) }}</span>
+                        </div>
+                    </div>
+                </div>
+                <p v-else class="text-center text-surface-500 py-10">Sin gastos en este período.</p>
+            </div>
+
+            <!-- Torta: gasto por supercategoría -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold">A vuelo de pájaro</h2>
+                    <Link v-if="hasSupercategories" href="/supercategories" class="text-xs font-medium text-primary">Editar grupos</Link>
+                </div>
+
+                <div v-if="!hasSupercategories" class="py-8 text-center space-y-3">
+                    <p class="text-surface-500">
+                        Agrupá tus categorías en supercategorías (por ejemplo, Comida = Supermercado + Verdura + Bebidas)
+                        para ver tus gastos de un vistazo.
+                    </p>
+                    <Link href="/supercategories" class="inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast">Crear supercategorías</Link>
+                </div>
+                <div v-else-if="hasExpenses" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                    <div class="relative h-56">
+                        <Chart type="doughnut" :data="superDoughnutData" :options="doughnutOptions" class="h-56" />
+                    </div>
+                    <div class="space-y-2 max-h-56 overflow-y-auto">
+                        <div v-for="c in superWithPct" :key="c.name" class="flex items-center gap-2 text-sm">
                             <span class="h-3 w-3 rounded-full shrink-0" :style="{ backgroundColor: c.color }"></span>
                             <span class="flex-1 min-w-0 break-words hyphens-auto">{{ c.name }}</span>
                             <span class="shrink-0 text-surface-500">{{ c.pct }}%</span>

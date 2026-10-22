@@ -47,7 +47,7 @@ class ChartsController extends Controller
         };
 
         $transactions = $user->transactions()
-            ->with('category:id,name,color')
+            ->with('category:id,name,color,supercategory_id')
             ->whereBetween('transaction_date', [$start, $end])
             ->get();
 
@@ -64,6 +64,23 @@ class ChartsController extends Controller
                 return [
                     'name' => $cat?->name ?? 'Sin categoría',
                     'color' => $cat?->color ?? '#9ca3af',
+                    'total' => (float) $group->sum($base),
+                ];
+            })
+            ->sortByDesc('total')
+            ->values();
+
+        // Torta "A vuelo de pájaro": el mismo gasto, sumado por supercategoría. Lo que
+        // está en categorías sin agrupar va junto en una porción gris.
+        $supercategories = $user->supercategories()->get(['id', 'name', 'color'])->keyBy('id');
+        $bySupercategory = $supercategories->isEmpty() ? collect() : $expenses
+            ->groupBy(fn ($t) => $supercategories->has($t->category?->supercategory_id) ? $t->category->supercategory_id : 0)
+            ->map(function ($group, $id) use ($base, $supercategories) {
+                $super = $supercategories->get($id);
+
+                return [
+                    'name' => $super?->name ?? 'Sin supercategoría',
+                    'color' => $super?->color ?? '#9ca3af',
                     'total' => (float) $group->sum($base),
                 ];
             })
@@ -102,6 +119,8 @@ class ChartsController extends Controller
                 'isCurrent' => $end->gte(now()),
             ],
             'byCategory' => $byCategory,
+            'bySupercategory' => $bySupercategory,
+            'hasSupercategories' => $supercategories->isNotEmpty(),
             'totals' => [
                 'income' => (float) $incomes->sum($base),
                 'expense' => (float) $expenses->sum($base),

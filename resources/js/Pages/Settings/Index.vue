@@ -15,7 +15,7 @@ import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
     IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle, IconTextSize,
-    IconFileText, IconShieldLock, IconCookie,
+    IconFileText, IconShieldLock, IconCookie, IconFolders,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -51,7 +51,7 @@ const saveCurrency = async () => {
 
 // --- Cambios sin sincronizar que el server rechazó ---
 const ENTITY_LABELS = {
-    transaction: 'Movimiento', account: 'Cuenta', category: 'Categoría', budget: 'Presupuesto',
+    transaction: 'Movimiento', account: 'Cuenta', category: 'Categoría', supercategory: 'Supercategoría', budget: 'Presupuesto',
     recurring: 'Recurrente', reminder: 'Recordatorio', preferences: 'Preferencias',
 };
 const ACTION_LABELS = { create: 'nuevo', update: 'editado', delete: 'borrado' };
@@ -84,6 +84,7 @@ const groups = [
         items: [
             { label: 'Perfil', icon: IconUser, href: '/profile' },
             { label: 'Categorías', icon: IconCategory, href: '/categories' },
+            { label: 'Supercategorías', icon: IconFolders, href: '/supercategories' },
             { label: 'Cuentas', icon: IconWallet, href: '/accounts' },
         ],
     },

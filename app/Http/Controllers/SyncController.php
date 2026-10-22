@@ -8,6 +8,7 @@ use App\Actions\CategoryActions;
 use App\Actions\PreferencesActions;
 use App\Actions\RecurringTransactionActions;
 use App\Actions\ReminderActions;
+use App\Actions\SupercategoryActions;
 use App\Actions\TransactionActions;
 use App\Exceptions\UnresolvedSyncReference;
 use App\Models\Account;
@@ -15,6 +16,7 @@ use App\Models\Budget;
 use App\Models\Category;
 use App\Models\RecurringTransaction;
 use App\Models\Reminder;
+use App\Models\Supercategory;
 use App\Models\SyncOperation;
 use App\Models\Transaction;
 use App\Models\User;
@@ -44,12 +46,16 @@ class SyncController extends Controller
     // Campos de `data` que pueden traer el id temporal de algo creado sin conexión.
     private const REF_KEYS = ['account_id', 'to_account_id', 'category_id', 'parent_id'];
 
+    // Lo mismo, pero listas de ids (las categorías de una supercategoría).
+    private const REF_LIST_KEYS = ['category_ids'];
+
     /** entidad => [modelo, Actions, campo del archivo adjunto] */
     private const ENTITIES = [
         'transaction' => [Transaction::class, TransactionActions::class, 'photo'],
         'account' => [Account::class, AccountActions::class, null],
         'category' => [Category::class, CategoryActions::class, 'image'],
         'budget' => [Budget::class, BudgetActions::class, null],
+        'supercategory' => [Supercategory::class, SupercategoryActions::class, null],
         'recurring' => [RecurringTransaction::class, RecurringTransactionActions::class, null],
         'reminder' => [Reminder::class, ReminderActions::class, null],
         'preferences' => [null, PreferencesActions::class, null],
@@ -168,6 +174,11 @@ class SyncController extends Controller
         foreach (self::REF_KEYS as $key) {
             if (isset($data[$key])) {
                 $data[$key] = $this->resolveId($user, $data[$key]);
+            }
+        }
+        foreach (self::REF_LIST_KEYS as $key) {
+            if (isset($data[$key]) && is_array($data[$key])) {
+                $data[$key] = array_map(fn ($id) => $this->resolveId($user, $id), $data[$key]);
             }
         }
 
