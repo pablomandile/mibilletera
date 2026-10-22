@@ -1,7 +1,7 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconFileDownload } from '@tabler/icons-vue';
 import { computed } from 'vue';
 import { formatMoney, formatMoneyWrappable } from '@/money';
 
@@ -105,6 +105,14 @@ const incomeDelta = computed(() => delta(props.totals.income, props.totals.prevI
                 </div>
                 <p v-else class="text-center text-surface-500 py-6">Sin ingresos este mes.</p>
             </div>
+
+            <a
+                :href="route('reports.pdf', { month: period.month })"
+                class="flex items-center justify-center gap-2 w-full rounded-xl border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 py-3 text-sm font-semibold text-primary hover:bg-surface-100 dark:hover:bg-surface-800"
+            >
+                <IconFileDownload :size="18" />
+                Descargar PDF del mes
+            </a>
         </div>
     </AppLayout>
 </template>

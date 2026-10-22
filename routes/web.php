@@ -9,6 +9,7 @@ use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\Legales\LegalesController;
+use App\Http\Controllers\MonthlyPdfController;
 use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PreferencesController;
 use App\Http\Controllers\RecurringTransactionController;
@@ -46,6 +47,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::get('/charts', [ChartsController::class, 'index'])->name('charts.index');
     Route::get('/reports', [ReportsController::class, 'index'])->name('reports.index');
+    Route::get('/informes/pdf', MonthlyPdfController::class)->name('reports.pdf');
 
     // Presupuestos
     Route::get('/budgets', [BudgetController::class, 'index'])->name('budgets.index');

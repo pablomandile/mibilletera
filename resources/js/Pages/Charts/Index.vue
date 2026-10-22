@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { formatMoney } from '@/money';
-import { IconChevronLeft, IconChevronRight } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight, IconFileDownload } from '@tabler/icons-vue';
 
 const props = defineProps({
     range: { type: String, default: 'month' },
@@ -55,6 +55,21 @@ const toDoughnut = (slices) => ({
 const doughnutData = computed(() => toDoughnut(props.byCategory));
 const superDoughnutData = computed(() => toDoughnut(props.bySupercategory));
 
+const balance = computed(() => props.totals.income - props.totals.expense);
+
+// Barras horizontales: total del período, ingresos contra gastos.
+const totalsData = computed(() => ({
+    labels: ['Ingresos', 'Gastos'],
+    datasets: [
+        {
+            data: [props.totals.income, props.totals.expense],
+            backgroundColor: ['#22c55e', '#f43f5e'],
+            borderRadius: 4,
+            maxBarThickness: 28,
+        },
+    ],
+}));
+
 const barData = computed(() => ({
     labels: props.trend.labels,
     datasets: [
@@ -97,7 +112,23 @@ const axisOptions = {
     },
 };
 
+const totalsOptions = {
+    maintainAspectRatio: false,
+    indexAxis: 'y',
+    plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => money(ctx.parsed.x) } },
+    },
+    scales: {
+        x: { ticks: { color: tick }, grid: { color: grid }, beginAtZero: true },
+        y: { ticks: { color: tick }, grid: { display: false } },
+    },
+};
+
 const hasExpenses = computed(() => props.byCategory.length > 0);
+
+// El PDF es de un mes: con el rango Mes, el que se está mirando.
+const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.slice(0, 7) }));
 </script>
 
 <template>
@@ -129,6 +160,17 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
                 >
                     {{ r.label }}
                 </button>
+            </div>
+
+            <!-- Barras horizontales: total de ingresos vs total de gastos -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold">Ingresos vs gastos</h2>
+                    <span class="text-sm font-semibold whitespace-nowrap tabular-nums" :class="balance < 0 ? 'text-rose-500' : 'text-emerald-500'">{{ money(balance) }}</span>
+                </div>
+                <div class="h-32">
+                    <Chart type="bar" :data="totalsData" :options="totalsOptions" class="h-32" />
+                </div>
             </div>
 
             <!-- Torta: gasto por categoría -->
@@ -186,7 +228,7 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
 
             <!-- Barras: ingresos vs gastos -->
             <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
-                <h2 class="font-semibold mb-3">Ingresos vs gastos</h2>
+                <h2 class="font-semibold mb-3">Ingresos vs gastos por {{ range === 'year' ? 'mes' : 'día' }}</h2>
                 <div class="h-56">
                     <Chart type="bar" :data="barData" :options="axisOptions" class="h-56" />
                 </div>
@@ -199,6 +241,15 @@ const hasExpenses = computed(() => props.byCategory.length > 0);
                     <Chart type="line" :data="lineData" :options="axisOptions" class="h-56" />
                 </div>
             </div>
+
+            <a
+                v-if="range === 'month'"
+                :href="pdfUrl"
+                class="flex items-center justify-center gap-2 w-full rounded-xl border border-surface-200 dark:border-surface-800 bg-white dark:bg-surface-900 py-3 text-sm font-semibold text-primary hover:bg-surface-100 dark:hover:bg-surface-800"
+            >
+                <IconFileDownload :size="18" />
+                Descargar PDF del mes
+            </a>
         </div>
     </AppLayout>
 </template>

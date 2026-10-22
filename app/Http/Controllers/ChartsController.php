@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Currency;
+use App\Services\MonthlyReport;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
@@ -73,19 +74,7 @@ class ChartsController extends Controller
         // Torta "A vuelo de pájaro": el mismo gasto, sumado por supercategoría. Lo que
         // está en categorías sin agrupar va junto en una porción gris.
         $supercategories = $user->supercategories()->get(['id', 'name', 'color'])->keyBy('id');
-        $bySupercategory = $supercategories->isEmpty() ? collect() : $expenses
-            ->groupBy(fn ($t) => $supercategories->has($t->category?->supercategory_id) ? $t->category->supercategory_id : 0)
-            ->map(function ($group, $id) use ($base, $supercategories) {
-                $super = $supercategories->get($id);
-
-                return [
-                    'name' => $super?->name ?? 'Sin supercategoría',
-                    'color' => $super?->color ?? '#9ca3af',
-                    'total' => (float) $group->sum($base),
-                ];
-            })
-            ->sortByDesc('total')
-            ->values();
+        $bySupercategory = app(MonthlyReport::class)->bySupercategory($expenses, $supercategories);
 
         // Tendencia por bucket
         $labels = [];

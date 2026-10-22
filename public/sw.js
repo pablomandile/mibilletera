@@ -115,8 +115,9 @@ self.addEventListener('fetch', (event) => {
     }
 
     // La descarga de datos personales ("Descargar mis datos") no se guarda nunca:
-    // es todo el contenido de la cuenta y no es una pantalla.
-    if (new URL(request.url).pathname.startsWith('/exportacion/')) {
+    // es todo el contenido de la cuenta y no es una pantalla. Tampoco el PDF del mes.
+    const { pathname } = new URL(request.url);
+    if (pathname.startsWith('/exportacion/') || pathname.startsWith('/informes/pdf')) {
         return;
     }
 
