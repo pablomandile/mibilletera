@@ -7,21 +7,24 @@ use App\Models\Transaction;
 use Illuminate\Support\Carbon;
 
 /**
- * Genera las transacciones pendientes de una recurrente hasta una fecha, con
- * catch-up. La usan el comando diario y el alta de un gasto fijo o en cuotas
- * (para que uno cargado con fecha vieja se ponga al día en el acto).
+ * Genera las transacciones pendientes de una recurrente, con catch-up. La usan
+ * el comando diario y el alta/edición de un gasto fijo o en cuotas.
+ *
+ * Hasta dónde: las recurrentes manuales, hasta hoy. Los gastos fijos y las
+ * cuotas, hasta fin del mes en curso: la del mes aparece apenas se cargan (y el
+ * 1° de cada mes la de ese mes), aunque su día todavía no haya llegado.
  */
 class RecurringGenerator
 {
     public function process(RecurringTransaction $rec, ?Carbon $today = null): int
     {
-        $today = ($today ?? now())->copy()->startOfDay();
+        $until = self::horizon($rec, $today);
         $count = 0;
         $next = $rec->next_run_date->copy();
 
         while (
             $rec->is_active
-            && $next->lte($today)
+            && $next->lte($until)
             && (! $rec->end_date || $next->lte($rec->end_date))
             && $count < 366
         ) {
@@ -57,5 +60,12 @@ class RecurringGenerator
         $rec->save();
 
         return $count;
+    }
+
+    public static function horizon(RecurringTransaction $rec, ?Carbon $today = null): Carbon
+    {
+        $today = ($today ?? now())->copy()->startOfDay();
+
+        return $rec->kind === 'manual' ? $today : $today->endOfMonth()->startOfDay();
     }
 }

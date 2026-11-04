@@ -110,7 +110,11 @@ class TransactionActions
             }
 
             if ($wasFixed && ! $wantsFixed) {
-                // Se dio de baja: esta fue la última repetición.
+                // Se dio de baja: esta fue la última repetición. Las que ya estaban
+                // generadas por adelantado (del mes en curso) y vienen después, se van.
+                $this->futureOccurrences($transaction)
+                    ->whereDate('transaction_date', '>', $transaction->transaction_date)
+                    ->delete();
                 $transaction->recurring->update(['is_active' => false]);
             } elseif ($wasFixed) {
                 $this->updateFixedSeries($transaction, $previousDate);
@@ -130,9 +134,12 @@ class TransactionActions
             $series = $transaction->recurring;
             $transaction->delete();
 
-            // Se borró el gasto que le dio origen antes de que se repitiera: era un
-            // error de carga, así que no quedan cuotas ni repeticiones fantasma.
-            if ($series && $series->kind !== 'manual' && ! $series->transactions()->exists()) {
+            // Se borró el gasto que le dio origen antes de que se repitiera de verdad
+            // (lo que queda, si queda algo, es la repetición adelantada de este mes):
+            // era un error de carga, así que no quedan cuotas ni repeticiones fantasma.
+            if ($series && $series->kind !== 'manual'
+                && ! $series->transactions()->whereDate('transaction_date', '<=', today())->exists()) {
+                $series->transactions()->delete();
                 $series->delete();
             }
         });
@@ -228,16 +235,34 @@ class TransactionActions
             'note' => $transaction->note,
         ]);
 
+        // Las repeticiones adelantadas (fecha futura) se rehacen con los datos nuevos:
+        // se borran y la serie retoma desde la última que queda.
+        $this->futureOccurrences($transaction)->delete();
+        $last = $series->transactions()->max('transaction_date');
+        $lastDate = Carbon::parse($last ?? $transaction->transaction_date)->startOfDay();
+
         // Si todavía no se repitió nunca y se corrigió la fecha, la serie se corre con ella.
         $date = $transaction->transaction_date->copy()->startOfDay();
         if (! $date->isSameDay($previousDate) && $series->transactions()->count() === 1) {
             $series->anchor_day = $date->day;
-            $series->last_generated_at = $date;
-            $series->next_run_date = $series->advance($date);
+            $lastDate = $date;
         }
 
+        $series->last_generated_at = $lastDate;
+        $series->next_run_date = $series->advance($lastDate);
         $series->save();
         $this->generator->process($series);
+    }
+
+    /**
+     * Repeticiones de la misma serie que todavía no llegaron (generadas por
+     * adelantado para el mes en curso), sin contar la que se está editando.
+     */
+    private function futureOccurrences(Transaction $transaction)
+    {
+        return Transaction::where('recurring_transaction_id', $transaction->recurring_transaction_id)
+            ->whereKeyNot($transaction->id)
+            ->whereDate('transaction_date', '>', today());
     }
 
     private function validateExpenseIncome(array $input, User $user): array

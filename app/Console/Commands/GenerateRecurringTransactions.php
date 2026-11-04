@@ -16,8 +16,12 @@ class GenerateRecurringTransactions extends Command
     {
         $today = now()->startOfDay();
 
+        // Fijos y cuotas se generan hasta fin de mes; las manuales, hasta hoy
+        // (el generador decide el tope de cada una).
         $due = RecurringTransaction::where('is_active', true)
-            ->whereDate('next_run_date', '<=', $today)
+            ->where(fn ($q) => $q
+                ->where(fn ($q) => $q->where('kind', 'manual')->whereDate('next_run_date', '<=', $today))
+                ->orWhere(fn ($q) => $q->where('kind', '!=', 'manual')->whereDate('next_run_date', '<=', $today->copy()->endOfMonth())))
             ->get();
 
         $created = 0;

@@ -136,6 +136,99 @@ class FixedAndInstallmentsTest extends TestCase
         $this->assertSame(RecurringTransaction::sole()->id, $tx->fresh()->recurring_transaction_id);
     }
 
+    public function test_marking_last_months_expense_as_fixed_repeats_it_this_month(): void
+    {
+        Carbon::setTestNow('2026-11-04 10:00');
+        $user = User::factory()->create();
+        $this->actingAs($user)->post('/transactions', $this->expense($user, ['transaction_date' => '2026-10-02']));
+        $tx = $user->transactions()->first();
+
+        $this->actingAs($user)->post("/transactions/{$tx->id}", $this->expense($user, [
+            'transaction_date' => '2026-10-02', 'is_fixed' => 1,
+        ]))->assertSessionHasNoErrors();
+
+        $this->assertSame(['2026-10-02', '2026-11-02'], $this->dates($user));
+    }
+
+    // Gasto del 8/10 marcado como fijo el 4/11: la del 8/11 aparece ya, sin esperar al 8.
+    private function fixedOnTheEighth(): User
+    {
+        Carbon::setTestNow('2026-11-04 10:00');
+        $user = User::factory()->create();
+        $this->actingAs($user)->post('/transactions', $this->expense($user, ['transaction_date' => '2026-10-08']));
+        $tx = $user->transactions()->first();
+        $this->actingAs($user)->post("/transactions/{$tx->id}", $this->expense($user, [
+            'transaction_date' => '2026-10-08', 'is_fixed' => 1,
+        ]));
+
+        return $user;
+    }
+
+    public function test_this_months_repetition_appears_right_away_even_if_its_day_has_not_come(): void
+    {
+        $user = $this->fixedOnTheEighth();
+
+        $this->assertSame(['2026-10-08', '2026-11-08'], $this->dates($user));
+        $this->assertSame('2026-12-08', RecurringTransaction::sole()->next_run_date->toDateString());
+
+        // El 1° de diciembre el proceso diario genera la de diciembre.
+        Carbon::setTestNow('2026-12-01 00:05');
+        $this->artisan('recurring:run');
+        $this->assertSame(['2026-10-08', '2026-11-08', '2026-12-08'], $this->dates($user));
+    }
+
+    public function test_a_new_fixed_expense_shows_this_months_occurrence_only_once(): void
+    {
+        Carbon::setTestNow('2026-11-04 10:00');
+        $user = User::factory()->create();
+        $this->actingAs($user)->post('/transactions', $this->expense($user, ['is_fixed' => 1, 'transaction_date' => '2026-11-20']));
+
+        // La del mes es la que se cargó; la próxima es la de diciembre.
+        $this->assertSame(['2026-11-20'], $this->dates($user));
+        $this->artisan('recurring:run');
+        $this->assertSame(['2026-11-20'], $this->dates($user));
+    }
+
+    public function test_editing_a_fixed_expense_redoes_the_upcoming_repetition(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        $october = $user->transactions()->orderBy('transaction_date')->first();
+
+        $this->actingAs($user)->post("/transactions/{$october->id}", $this->expense($user, [
+            'transaction_date' => '2026-10-08', 'is_fixed' => 1, 'amount' => 1800,
+        ]));
+
+        $this->assertSame(['2026-10-08', '2026-11-08'], $this->dates($user));
+        $this->assertEquals(1800, $user->transactions()->whereDate('transaction_date', '2026-11-08')->sole()->amount);
+    }
+
+    public function test_unchecking_fixed_removes_the_upcoming_repetition(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        $october = $user->transactions()->orderBy('transaction_date')->first();
+
+        $this->actingAs($user)->post("/transactions/{$october->id}", $this->expense($user, [
+            'transaction_date' => '2026-10-08', 'is_fixed' => 0,
+        ]));
+
+        $this->assertSame(['2026-10-08'], $this->dates($user));
+        $this->assertFalse(RecurringTransaction::sole()->is_active);
+    }
+
+    public function test_deleting_the_origin_with_only_the_upcoming_repetition_removes_the_series(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        // La de octubre ya pasó: borrar la de noviembre (adelantada) no borra la serie.
+        $this->actingAs($user)->delete('/transactions/'.$user->transactions()->whereDate('transaction_date', '2026-11-08')->sole()->id);
+        $this->assertSame(1, RecurringTransaction::count());
+
+        // Un fijo cargado por error con fecha futura: borrarlo limpia la serie.
+        $other = User::factory()->create();
+        $this->actingAs($other)->post('/transactions', $this->expense($other, ['is_fixed' => 1, 'transaction_date' => '2026-11-25']));
+        $this->actingAs($other)->delete('/transactions/'.$other->transactions()->sole()->id);
+        $this->assertSame(0, $other->recurringTransactions()->count());
+    }
+
     public function test_installments_split_the_total_and_number_each_one(): void
     {
         Carbon::setTestNow('2026-01-15 10:00');
