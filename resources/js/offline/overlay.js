@@ -64,6 +64,11 @@ export function overlayDashboard({ transactions, totals, dayTotals, period, filt
     const list = applyList(transactions, 'transaction', {
         accept: (t) => inMonth(t) && (!filter || t.type === filter),
     });
+    // Pagado / impago marcado sin conexión (no mueve totales ni saldos).
+    for (const op of opsOf('payment')) {
+        const i = list.findIndex((t) => sameId(t.id, op.id));
+        if (i >= 0) list[i] = { ...list[i], is_paid: !!op.data?.is_paid, _pending: true };
+    }
     // Más nuevo primero, como el server; dentro del mismo día, lo pendiente arriba.
     list.sort((a, b) => b.date.localeCompare(a.date) || Number(!!b._pending) - Number(!!a._pending));
 

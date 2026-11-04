@@ -43,6 +43,8 @@ class RecurringGenerator
                 'exchange_rate' => $rec->exchange_rate,
                 'note' => $rec->note,
                 'transaction_date' => $next->copy(),
+                // Una repetición de gasto fijo arranca impaga hasta que se marque.
+                'is_paid' => $rec->kind !== 'fixed',
             ]);
 
             if ($installment) {

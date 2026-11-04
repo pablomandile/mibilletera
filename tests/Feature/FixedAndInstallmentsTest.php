@@ -229,6 +229,51 @@ class FixedAndInstallmentsTest extends TestCase
         $this->assertSame(0, $other->recurringTransactions()->count());
     }
 
+    public function test_generated_repetitions_start_unpaid_and_can_be_marked_paid(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        [$october, $november] = $user->transactions()->orderBy('transaction_date')->get();
+
+        // La que cargó el usuario está paga; la que generó el sistema, no.
+        $this->assertTrue($october->is_paid);
+        $this->assertFalse($november->is_paid);
+
+        $this->actingAs($user)->patch("/transactions/{$november->id}/paid", ['is_paid' => true])
+            ->assertRedirect()->assertSessionHasNoErrors();
+        $this->assertTrue($november->fresh()->is_paid);
+
+        $this->actingAs($user)->patch("/transactions/{$november->id}/paid", ['is_paid' => false]);
+        $this->assertFalse($november->fresh()->is_paid);
+    }
+
+    public function test_editing_the_series_keeps_a_repetition_paid_in_advance(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        [$october, $november] = $user->transactions()->orderBy('transaction_date')->get();
+        $this->actingAs($user)->patch("/transactions/{$november->id}/paid", ['is_paid' => true]);
+
+        $this->actingAs($user)->post("/transactions/{$october->id}", $this->expense($user, [
+            'transaction_date' => '2026-10-08', 'is_fixed' => 1, 'amount' => 1800,
+        ]));
+
+        $november = $november->fresh();
+        $this->assertTrue($november->is_paid);
+        $this->assertEquals(1800, $november->amount);
+    }
+
+    public function test_paid_can_be_marked_offline_and_not_on_someone_elses(): void
+    {
+        $user = $this->fixedOnTheEighth();
+        $november = $user->transactions()->orderByDesc('transaction_date')->first();
+        $op = ['op_id' => (string) Str::uuid(), 'entity' => 'payment', 'action' => 'update', 'id' => $november->id, 'data' => ['is_paid' => true]];
+
+        $this->actingAs($user)->post('/sync', ['ops' => json_encode([$op])])->assertJsonPath('results.0.status', 'ok');
+        $this->assertTrue($november->fresh()->is_paid);
+
+        $intruder = User::factory()->create();
+        $this->actingAs($intruder)->patch("/transactions/{$november->id}/paid", ['is_paid' => false])->assertForbidden();
+    }
+
     public function test_installments_split_the_total_and_number_each_one(): void
     {
         Carbon::setTestNow('2026-01-15 10:00');

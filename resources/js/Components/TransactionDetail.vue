@@ -1,9 +1,11 @@
 <script setup>
-import { computed } from 'vue';
+import { computed, ref, watch } from 'vue';
+import { router } from '@inertiajs/vue3';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
-import { IconX, IconPencil, IconTrash, IconArrowsExchange } from '@tabler/icons-vue';
+import { IconX, IconPencil, IconTrash, IconArrowsExchange, IconCircleCheck, IconCircleDashed } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
 import { formatMoney } from '@/money';
+import { mutate } from '@/offline/mutate';
 
 const props = defineProps({
     transaction: { type: Object, default: null },
@@ -27,6 +29,31 @@ const typeLabel = computed(() => ({ expense: 'Gasto', income: 'Ingreso', transfe
 const amountColor = computed(() =>
     isTransfer.value ? 'text-surface-900 dark:text-surface-100' : (t.value?.type === 'income' ? 'text-emerald-500' : 'text-rose-500')
 );
+
+// ---- Pagado / impago (solo gastos fijos) ----
+const isFixed = computed(() => !!(t.value?.fixed_series || t.value?.is_fixed));
+// La ficha queda abierta sobre la fila de antes: el estado nuevo se recuerda acá.
+const paidOverride = ref(null);
+watch(() => t.value?.id, () => (paidOverride.value = null));
+const isPaid = computed(() => paidOverride.value ?? t.value?.is_paid !== false);
+const savingPaid = ref(false);
+
+const togglePaid = async () => {
+    if (!t.value || savingPaid.value) return;
+    const next = !isPaid.value;
+    const id = t.value.id;
+    savingPaid.value = true;
+    const result = await mutate(
+        { entity: 'payment', action: 'update', id, data: { is_paid: next } },
+        (extra) => router.patch(route('transactions.paid', id), { is_paid: next }, {
+            preserveScroll: true,
+            onSuccess: () => (paidOverride.value = next),
+            ...extra,
+        })
+    );
+    if (result === 'queued') paidOverride.value = next;
+    savingPaid.value = false;
+};
 
 const remove = async () => {
     if (!t.value) return;
@@ -90,9 +117,9 @@ const remove = async () => {
                             <span class="text-surface-500">Cuota</span>
                             <span class="font-medium">{{ t.installment_number }} de {{ t.installments_total }}</span>
                         </div>
-                        <div v-else-if="t.is_fixed" class="flex justify-between py-2.5">
-                            <span class="text-surface-500">Repetición</span>
-                            <span class="font-medium">Todos los meses</span>
+                        <div v-else-if="isFixed" class="flex justify-between py-2.5">
+                            <span class="text-surface-500">Gasto fijo</span>
+                            <span class="font-medium" :class="isPaid ? 'text-emerald-500' : 'text-surface-500'">{{ isPaid ? 'Pagado' : 'Impago' }}</span>
                         </div>
                         <div v-if="t.note" class="flex justify-between py-2.5 gap-4">
                             <span class="text-surface-500 shrink-0">Nota</span>
@@ -101,7 +128,20 @@ const remove = async () => {
                     </div>
 
                     <!-- Acciones -->
-                    <div class="flex gap-2 pt-5">
+                    <button
+                        v-if="isFixed"
+                        type="button"
+                        class="mt-5 w-full flex items-center justify-center gap-2 rounded-xl border py-3 font-semibold transition disabled:opacity-50"
+                        :class="isPaid
+                            ? 'border-surface-300 dark:border-surface-700 text-surface-600 dark:text-surface-300 hover:bg-surface-50 dark:hover:bg-surface-800'
+                            : 'border-emerald-500/40 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/10'"
+                        :disabled="savingPaid"
+                        @click="togglePaid"
+                    >
+                        <template v-if="isPaid"><IconCircleDashed :size="20" /> Marcar como impago</template>
+                        <template v-else><IconCircleCheck :size="20" /> Marcar como pagado</template>
+                    </button>
+                    <div class="flex gap-2" :class="isFixed ? 'pt-2' : 'pt-5'">
                         <button type="button" class="grid place-items-center h-11 w-11 rounded-xl border border-rose-500/30 text-rose-500 hover:bg-rose-500/10 shrink-0" @click="remove">
                             <IconTrash :size="20" />
                         </button>

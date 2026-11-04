@@ -283,6 +283,8 @@ function rowView(data) {
         // En cuotas, lo que se ve en el Inicio es la cuota 1, no el total.
         amount: n ? Math.round((data.amount - (n - 1) * Math.round((data.amount / n) * 100) / 100) * 100) / 100 : Number(data.amount),
         is_fixed: !!data.is_fixed,
+        fixed_series: !!data.is_fixed || !!props.transaction?.fixed_series,
+        is_paid: props.transaction?.is_paid ?? true,
         installment_number: n ? 1 : props.transaction?.installment_number ?? null,
         installments_total: n ?? props.transaction?.installments_total ?? null,
         currency_code: account?.currency_code ?? props.defaultCurrency,

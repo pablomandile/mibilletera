@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\TransactionActions;
+use App\Actions\TransactionPaymentActions;
 use App\Models\Currency;
 use App\Models\Transaction;
 use Illuminate\Http\Request;
@@ -43,6 +44,8 @@ class TransactionController extends Controller
                 'currency_code' => $transaction->currency_code,
                 'transfer_currency' => $transaction->transfer_currency,
                 'is_fixed' => $transaction->isFixed(),
+                'fixed_series' => $transaction->recurring?->kind === 'fixed',
+                'is_paid' => $transaction->is_paid,
                 'installment_number' => $transaction->installment_number,
                 'installments_total' => $transaction->installments_total,
             ],
@@ -63,6 +66,15 @@ class TransactionController extends Controller
         $actions->update(Auth::user(), $transaction, $request->all(), $request->file('photo'));
 
         return redirect()->route('dashboard')->with('success', $transaction->type === 'transfer' ? 'Transferencia actualizada.' : 'Transacción actualizada.');
+    }
+
+    public function paid(Request $request, Transaction $transaction, TransactionPaymentActions $actions)
+    {
+        abort_unless($transaction->user_id === Auth::id(), 403);
+
+        $actions->update(Auth::user(), $transaction, $request->all());
+
+        return back()->with('success', $transaction->is_paid ? 'Marcado como pagado.' : 'Marcado como impago.');
     }
 
     public function destroy(Transaction $transaction, TransactionActions $actions)

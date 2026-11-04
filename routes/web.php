@@ -91,6 +91,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('/transactions/{transaction}/edit', [TransactionController::class, 'edit'])->name('transactions.edit');
     Route::post('/transactions', [TransactionController::class, 'store'])->name('transactions.store');
     Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
+    Route::patch('/transactions/{transaction}/paid', [TransactionController::class, 'paid'])->name('transactions.paid');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
 
     // Cuentas

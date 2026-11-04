@@ -10,6 +10,7 @@ use App\Actions\RecurringTransactionActions;
 use App\Actions\ReminderActions;
 use App\Actions\SupercategoryActions;
 use App\Actions\TransactionActions;
+use App\Actions\TransactionPaymentActions;
 use App\Exceptions\UnresolvedSyncReference;
 use App\Models\Account;
 use App\Models\Budget;
@@ -52,6 +53,7 @@ class SyncController extends Controller
     /** entidad => [modelo, Actions, campo del archivo adjunto] */
     private const ENTITIES = [
         'transaction' => [Transaction::class, TransactionActions::class, 'photo'],
+        'payment' => [Transaction::class, TransactionPaymentActions::class, null],
         'account' => [Account::class, AccountActions::class, null],
         'category' => [Category::class, CategoryActions::class, 'image'],
         'budget' => [Budget::class, BudgetActions::class, null],

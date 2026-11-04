@@ -80,7 +80,13 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                     <p class="text-sm font-medium break-words hyphens-auto">
                         {{ transaction.category?.name ?? 'Sin categoría' }}
                         <span v-if="transaction.installment_number" class="ml-1 whitespace-nowrap rounded-full bg-surface-100 dark:bg-surface-800 px-1.5 py-0.5 text-[11px] font-normal text-surface-500">Cuota {{ transaction.installment_number }}/{{ transaction.installments_total }}</span>
-                        <IconRepeat v-else-if="transaction.is_fixed" :size="14" class="ml-1 inline align-[-2px] text-surface-400" aria-label="Fijo, se repite cada mes" />
+                        <IconRepeat
+                            v-else-if="transaction.fixed_series || transaction.is_fixed"
+                            :size="14"
+                            class="ml-1 inline align-[-2px]"
+                            :class="transaction.is_paid === false ? 'text-surface-400' : 'text-emerald-500'"
+                            :aria-label="transaction.is_paid === false ? 'Gasto fijo, impago' : 'Gasto fijo, pagado'"
+                        />
                     </p>
                     <p v-if="transaction.note" class="text-xs text-surface-500 break-words hyphens-auto">{{ transaction.note }}</p>
                 </div>

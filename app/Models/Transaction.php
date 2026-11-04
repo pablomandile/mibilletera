@@ -10,7 +10,7 @@ class Transaction extends Model
 {
     protected $fillable = [
         'user_id', 'account_id', 'category_id', 'recurring_transaction_id',
-        'installment_number', 'installments_total', 'type', 'amount',
+        'installment_number', 'installments_total', 'is_paid', 'type', 'amount',
         'currency_code', 'exchange_rate', 'to_account_id', 'transfer_amount',
         'transfer_currency', 'note', 'photo_path', 'transaction_date',
     ];
@@ -20,6 +20,7 @@ class Transaction extends Model
         'exchange_rate' => 'decimal:8',
         'transfer_amount' => 'decimal:2',
         'transaction_date' => 'datetime',
+        'is_paid' => 'boolean',
     ];
 
     protected $appends = ['photo_url'];
@@ -98,6 +99,10 @@ class Transaction extends Model
             'exchange_rate' => (float) $this->exchange_rate,
             'photo_url' => $this->photo_url,
             'is_fixed' => $this->isFixed(),
+            // Es parte de un gasto fijo (vigente o dado de baja): muestra el ícono
+            // de repetición, verde si está pagado.
+            'fixed_series' => $this->recurring?->kind === 'fixed',
+            'is_paid' => $this->is_paid,
             'installment_number' => $this->installment_number,
             'installments_total' => $this->installments_total,
         ];

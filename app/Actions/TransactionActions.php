@@ -235,15 +235,32 @@ class TransactionActions
             'note' => $transaction->note,
         ]);
 
-        // Las repeticiones adelantadas (fecha futura) se rehacen con los datos nuevos:
-        // se borran y la serie retoma desde la última que queda.
-        $this->futureOccurrences($transaction)->delete();
-        $last = $series->transactions()->max('transaction_date');
-        $lastDate = Carbon::parse($last ?? $transaction->transaction_date)->startOfDay();
-
-        // Si todavía no se repitió nunca y se corrigió la fecha, la serie se corre con ella.
         $date = $transaction->transaction_date->copy()->startOfDay();
-        if (! $date->isSameDay($previousDate) && $series->transactions()->count() === 1) {
+
+        if ($date->isSameDay($previousDate)) {
+            // Las repeticiones adelantadas (fecha futura) toman los datos nuevos en el
+            // lugar, así no pierden el «pagado» si ya se pagaron por adelantado.
+            $this->futureOccurrences($transaction)->update([
+                'account_id' => $transaction->account_id,
+                'category_id' => $transaction->category_id,
+                'type' => $transaction->type,
+                'amount' => $transaction->amount,
+                'currency_code' => $transaction->currency_code,
+                'exchange_rate' => $transaction->exchange_rate,
+                'note' => $transaction->note,
+            ]);
+            $series->save();
+
+            return;
+        }
+
+        // Se corrigió la fecha: las adelantadas se rehacen y la serie retoma desde
+        // la última que queda.
+        $this->futureOccurrences($transaction)->delete();
+        $lastDate = Carbon::parse($series->transactions()->max('transaction_date') ?? $date)->startOfDay();
+
+        // Si todavía no se repitió nunca, la serie se corre con ella.
+        if ($series->transactions()->count() === 1) {
             $series->anchor_day = $date->day;
             $lastDate = $date;
         }
