@@ -24,6 +24,17 @@ const shownItems = computed(() => applyList(props.items, 'recurring'));
 const accountOptions = computed(() => overlayAccountOptions(props.accounts));
 const categoryOptions = computed(() => overlayCategoryOptions(props.categories));
 
+// Las que nacieron al cargar un gasto fijo o en cuotas se describen distinto.
+const seriesLabel = (r) => {
+    if (r.kind === 'installments') {
+        return r.is_active
+            ? `Cuotas · próx. ${r.next_installment} de ${r.installments_total} el ${r.next_run_date}`
+            : `Cuotas · ${r.installments_total} de ${r.installments_total}, terminada`;
+    }
+    const base = r.kind === 'fixed' ? (r.type === 'income' ? 'Ingreso fijo' : 'Gasto fijo') : freqLabel(r.frequency, r.interval);
+    return `${base} · próx. ${r.next_run_date}${r.is_active ? '' : ' · pausada'}`;
+};
+
 const FREQ = [
     { value: 'daily', label: 'Día' },
     { value: 'weekly', label: 'Semana' },
@@ -136,7 +147,7 @@ const remove = async () => {
                     <CategoryIcon :icon-type="r.category?.icon_type ?? 'preset'" :icon-value="r.category?.icon_value ?? 'category'" :icon-url="r.category?.icon_url" :color="r.category?.color ?? '#9ca3af'" :size="42" :icon-size="22" />
                     <div class="min-w-0 flex-1">
                         <p class="font-medium break-words hyphens-auto">{{ r.category?.name ?? 'Sin categoría' }}</p>
-                        <p class="text-xs text-surface-500">{{ freqLabel(r.frequency, r.interval) }} · próx. {{ r.next_run_date }}<span v-if="!r.is_active"> · pausada</span></p>
+                        <p class="text-xs text-surface-500">{{ seriesLabel(r) }}</p>
                     </div>
                     <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" :class="r.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">
                         {{ r.type === 'income' ? '+' : '-' }}{{ money(r.amount, r.currency_code) }}

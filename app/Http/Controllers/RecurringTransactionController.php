@@ -32,6 +32,9 @@ class RecurringTransactionController extends Controller
                 'next_run_date' => $r->next_run_date->format('Y-m-d'),
                 'end_date' => $r->end_date?->format('Y-m-d'),
                 'is_active' => $r->is_active,
+                'kind' => $r->kind,
+                'installments_total' => $r->installments_total,
+                'next_installment' => $r->next_installment,
                 'category' => $r->category ? [
                     'name' => $r->category->name,
                     'icon_type' => $r->category->icon_type,

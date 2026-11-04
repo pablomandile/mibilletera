@@ -86,6 +86,14 @@ const remove = async () => {
                             <span class="text-surface-500">Fecha</span>
                             <span class="font-medium capitalize">{{ dateLabel }}</span>
                         </div>
+                        <div v-if="t.installment_number" class="flex justify-between py-2.5">
+                            <span class="text-surface-500">Cuota</span>
+                            <span class="font-medium">{{ t.installment_number }} de {{ t.installments_total }}</span>
+                        </div>
+                        <div v-else-if="t.is_fixed" class="flex justify-between py-2.5">
+                            <span class="text-surface-500">Repetición</span>
+                            <span class="font-medium">Todos los meses</span>
+                        </div>
                         <div v-if="t.note" class="flex justify-between py-2.5 gap-4">
                             <span class="text-surface-500 shrink-0">Nota</span>
                             <span class="font-medium text-right">{{ t.note }}</span>

@@ -85,7 +85,7 @@ const groups = [
             { label: 'Perfil', icon: IconUser, href: '/profile' },
             { label: 'Categorías', icon: IconCategory, href: '/categories' },
             { label: 'Supercategorías', icon: IconFolders, href: '/supercategories' },
-            { label: 'Cuentas', icon: IconWallet, href: '/accounts' },
+            { label: 'Cuentas y métodos de pago', icon: IconWallet, href: '/accounts' },
         ],
     },
     {

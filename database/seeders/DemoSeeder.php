@@ -85,6 +85,7 @@ class DemoSeeder extends Seeder
         $this->card = $this->user->accounts()->create([
             'name' => 'Tarjeta de crédito', 'type' => 'card', 'currency_code' => 'ARS',
             'initial_balance' => 0, 'color' => '#a855f7', 'icon' => 'credit-card', 'sort_order' => 2,
+            'accepts_installments' => true,
         ]);
         $this->usd = $this->user->accounts()->create([
             'name' => 'Ahorro en dólares', 'type' => 'bank', 'currency_code' => 'USD',
@@ -248,12 +249,14 @@ class DemoSeeder extends Seeder
                 'account_id' => $account->id,
                 'category_id' => $type === 'income' ? $this->income[$category] : $this->expense[$category],
                 'type' => $type,
+                'kind' => 'fixed',
                 'amount' => $amount,
                 'currency_code' => 'ARS',
                 'exchange_rate' => 1,
                 'note' => $note,
                 'frequency' => 'monthly',
                 'interval' => 1,
+                'anchor_day' => $day,
                 'next_run_date' => $next($day)->toDateString(),
                 'is_active' => true,
             ]);

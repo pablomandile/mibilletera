@@ -3,6 +3,7 @@ import { ref, computed, watch } from 'vue';
 import { Head, useForm, router, usePage } from '@inertiajs/vue3';
 import {
     IconChevronLeft, IconPhoto, IconCheck, IconBackspace, IconPlus, IconCalendarEvent, IconArrowRight, IconTrash,
+    IconCreditCardPay,
 } from '@tabler/icons-vue';
 import CategoryIcon from '@/Components/CategoryIcon.vue';
 import CategoryFormDialog from '@/Components/CategoryFormDialog.vue';
@@ -53,6 +54,12 @@ const transactionDate = ref(
     `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
 );
 const showNewCategory = ref(false);
+
+// Gasto fijo (se repite cada mes) y compra en cuotas: se excluyen entre sí.
+const isFixed = ref(tx?.is_fixed ?? false);
+const installments = ref(1);
+const isInstallment = !!tx?.installment_number; // editando una cuota: solo se muestra
+const INSTALLMENT_OPTIONS = [1, ...Array.from({ length: 23 }, (_, i) => i + 2), 36, 48];
 
 const symbolOf = (code) => props.currencies.find((c) => c.code === code)?.symbol ?? '$';
 const baseSymbol = computed(() => symbolOf(props.defaultCurrency));
@@ -136,6 +143,17 @@ const pendingExpression = computed(() => {
 
 const baseConverted = computed(() => formatAmount(amount.value * (Number(exchangeRate.value) || 0)));
 
+// Cuotas: solo al cargar un gasto nuevo con una cuenta que las acepta.
+const canInstallments = computed(() =>
+    !isEdit.value && type.value === 'expense' && !!selectedAccount.value?.accepts_installments
+);
+const installmentAmount = computed(() => formatAmount(Math.round((amount.value / installments.value) * 100) / 100));
+const canFixed = computed(() => type.value !== 'transfer' && !isInstallment && installments.value <= 1);
+const fixedDay = computed(() => Number(transactionDate.value?.slice(8, 10)) || null);
+
+watch(canInstallments, (ok) => { if (!ok) installments.value = 1; });
+watch(installments, (n) => { if (n > 1) isFixed.value = false; });
+
 function press(key) {
     const expr = expression.value;
     const last = expr.slice(-1);
@@ -195,6 +213,8 @@ const form = useForm({
     transfer_amount: null,
     note: '',
     transaction_date: '',
+    is_fixed: 0,
+    installments: null,
     photo: null,
 });
 
@@ -220,6 +240,10 @@ function save() {
         form.transfer_amount = null;
         form.photo = photo.value;
     }
+
+    // 1/0 y no true/false: viaja como FormData y la validación "boolean" no acepta "true".
+    form.is_fixed = canFixed.value && isFixed.value ? 1 : 0;
+    form.installments = canInstallments.value && installments.value > 1 ? installments.value : null;
 
     const { photo: file, ...data } = form.data();
 
@@ -253,9 +277,14 @@ function rowView(data) {
     const to = accountOptions.value.find((a) => a.id === data.to_account_id);
     const category = categoryOptions.value.find((c) => c.id === data.category_id);
     const isTransfer = data.type === 'transfer';
+    const n = Number(data.installments) || null;
     return {
         type: data.type,
-        amount: Number(data.amount),
+        // En cuotas, lo que se ve en el Inicio es la cuota 1, no el total.
+        amount: n ? Math.round((data.amount - (n - 1) * Math.round((data.amount / n) * 100) / 100) * 100) / 100 : Number(data.amount),
+        is_fixed: !!data.is_fixed,
+        installment_number: n ? 1 : props.transaction?.installment_number ?? null,
+        installments_total: n ?? props.transaction?.installments_total ?? null,
         currency_code: account?.currency_code ?? props.defaultCurrency,
         note: data.note || null,
         date: data.transaction_date,
@@ -413,6 +442,30 @@ const tabClass = (t, activeColor) =>
                     <span class="text-surface-500">Recibís en {{ toAccount.currency_code }}:</span>
                     <input v-model="transferAmount" type="number" step="0.01" class="w-32 rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1 text-sm" />
                 </div>
+
+                <!-- Gasto fijo / cuotas -->
+                <div v-if="isInstallment" class="flex items-center gap-2 px-4 pt-2 text-sm text-surface-500">
+                    <IconCreditCardPay :size="18" class="shrink-0" />
+                    Cuota {{ tx.installment_number }} de {{ tx.installments_total }}
+                </div>
+                <div v-else-if="canFixed || canInstallments" class="flex flex-wrap items-center gap-x-4 gap-y-2 px-4 pt-2 text-sm">
+                    <label v-if="canFixed" class="flex items-center gap-2 cursor-pointer min-w-0">
+                        <input v-model="isFixed" type="checkbox" class="rounded border-surface-300 dark:border-surface-700 text-primary focus:ring-primary" />
+                        <span class="min-w-0">
+                            {{ type === 'income' ? 'Ingreso fijo' : 'Gasto fijo' }}
+                            <span v-if="isFixed && fixedDay" class="text-surface-400">· cada mes el {{ fixedDay }}</span>
+                        </span>
+                    </label>
+                    <label v-if="canInstallments" class="flex items-center gap-2 min-w-0">
+                        <span class="text-surface-500">Cuotas</span>
+                        <select v-model.number="installments" class="text-sm rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1 pr-8">
+                            <option v-for="n in INSTALLMENT_OPTIONS" :key="n" :value="n">{{ n === 1 ? 'Sin cuotas' : n }}</option>
+                        </select>
+                        <span v-if="installments > 1 && amount > 0" class="text-surface-400 truncate">de {{ currencySymbol }} {{ installmentAmount }}</span>
+                    </label>
+                </div>
+
+                <p v-if="form.errors.installments" class="px-4 pt-1 text-xs text-rose-500">{{ form.errors.installments }}</p>
 
                 <!-- Nota + foto + fecha -->
                 <div class="flex items-center gap-2 px-4 py-2">

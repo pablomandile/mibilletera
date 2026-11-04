@@ -9,7 +9,8 @@ use Illuminate\Support\Facades\Storage;
 class Transaction extends Model
 {
     protected $fillable = [
-        'user_id', 'account_id', 'category_id', 'type', 'amount',
+        'user_id', 'account_id', 'category_id', 'recurring_transaction_id',
+        'installment_number', 'installments_total', 'type', 'amount',
         'currency_code', 'exchange_rate', 'to_account_id', 'transfer_amount',
         'transfer_currency', 'note', 'photo_path', 'transaction_date',
     ];
@@ -43,6 +44,20 @@ class Transaction extends Model
         return $this->belongsTo(Category::class);
     }
 
+    // Serie (gasto fijo, cuotas o recurrente manual) a la que pertenece.
+    public function recurring(): BelongsTo
+    {
+        return $this->belongsTo(RecurringTransaction::class, 'recurring_transaction_id');
+    }
+
+    // Es parte de un gasto fijo que sigue vigente: el form muestra el tilde marcado.
+    public function isFixed(): bool
+    {
+        $rec = $this->recurring;
+
+        return $rec !== null && $rec->kind === 'fixed' && $rec->is_active;
+    }
+
     public function getPhotoUrlAttribute(): ?string
     {
         return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
@@ -55,7 +70,7 @@ class Transaction extends Model
         return (float) $this->amount * (float) $this->exchange_rate;
     }
 
-    // Fila de los listados (Inicio y Buscar). Espera cargadas category, account y toAccount.
+    // Fila de los listados (Inicio y Buscar). Espera cargadas category, account, toAccount y recurring.
     public function toListItem(): array
     {
         return [
@@ -82,6 +97,9 @@ class Transaction extends Model
             'category_id' => $this->category_id,
             'exchange_rate' => (float) $this->exchange_rate,
             'photo_url' => $this->photo_url,
+            'is_fixed' => $this->isFixed(),
+            'installment_number' => $this->installment_number,
+            'installments_total' => $this->installments_total,
         ];
     }
 }

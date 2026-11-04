@@ -1,6 +1,6 @@
 <script setup>
 import CategoryIcon from '@/Components/CategoryIcon.vue';
-import { IconArrowsExchange, IconTrash, IconCloudOff } from '@tabler/icons-vue';
+import { IconArrowsExchange, IconTrash, IconCloudOff, IconRepeat } from '@tabler/icons-vue';
 import { confirmAction } from '@/composables/useConfirm';
 import { useSwipeRow } from '@/composables/useSwipeRow';
 import { formatMoney } from '@/money';
@@ -77,7 +77,11 @@ const { dx, swiping, onDown, onMove, onUp, onCancel } = useSwipeRow({
                     :icon-size="22"
                 />
                 <div class="min-w-0 flex-1">
-                    <p class="text-sm font-medium break-words hyphens-auto">{{ transaction.category?.name ?? 'Sin categoría' }}</p>
+                    <p class="text-sm font-medium break-words hyphens-auto">
+                        {{ transaction.category?.name ?? 'Sin categoría' }}
+                        <span v-if="transaction.installment_number" class="ml-1 whitespace-nowrap rounded-full bg-surface-100 dark:bg-surface-800 px-1.5 py-0.5 text-[11px] font-normal text-surface-500">Cuota {{ transaction.installment_number }}/{{ transaction.installments_total }}</span>
+                        <IconRepeat v-else-if="transaction.is_fixed" :size="14" class="ml-1 inline align-[-2px] text-surface-400" aria-label="Fijo, se repite cada mes" />
+                    </p>
                     <p v-if="transaction.note" class="text-xs text-surface-500 break-words hyphens-auto">{{ transaction.note }}</p>
                 </div>
                 <span class="shrink-0 whitespace-nowrap text-sm font-semibold tabular-nums" :class="transaction.type === 'income' ? 'text-emerald-500' : 'text-rose-500'">

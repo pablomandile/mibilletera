@@ -28,6 +28,7 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - **No se puede eliminar** una cuenta que tiene movimientos → hay que **archivarla**.
 - **Debe existir siempre al menos una cuenta activa** (no archivada): no se puede eliminar la última.
 - Las cuentas archivadas se ocultan de las listas de selección (calculadora, etc.) pero conservan su historial.
+- Las cuentas son también los **métodos de pago** (en Ajustes: «Cuentas y métodos de pago»). Una cuenta puede marcarse **«Acepta cuotas»** (viene tildado al crear una de tipo Tarjeta).
 
 ## 4. Categorías
 
@@ -44,6 +45,13 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - El **monto** se ingresa con una calculadora que admite operaciones (`+ − × ÷`) evaluadas **de izquierda a derecha**.
 - La transacción hereda la **moneda de la cuenta**; se puede adjuntar **nota**, **foto** (imagen ≤ 5 MB) y **fecha** (por defecto hoy).
 - Solo el dueño puede editar/eliminar sus transacciones.
+- **Gasto fijo** (o ingreso fijo): al cargarlo se tilda «Gasto fijo» y se repite solo **cada mes el mismo día** que el primero (si el mes no tiene ese día, cae el último; al mes siguiente vuelve al día original). Si se cargó con fecha vieja, las repeticiones que faltan se generan en el acto.
+  - Al **editar** una repetición y **destildar** «Gasto fijo», esa es **la última** (baja del servicio).
+  - Si se edita y **queda tildado**, el monto, la categoría, la cuenta y la nota valen para **las repeticiones que vienen**; las ya generadas no cambian.
+  - Se puede tildar al editar un gasto común: arranca a repetirse desde su fecha.
+- **Cuotas**: con una cuenta que acepta cuotas, al cargar un **gasto nuevo** se elige la cantidad (2 a 48). Se escribe el **total**; se guarda la **cuota 1 de N** por total ÷ N (la cuota 1 absorbe los centavos del redondeo) y las cuotas 2…N se generan solas cada mes, el mismo día. No se combina con «Gasto fijo» ni se aplica a ingresos.
+  - Una cuota se edita sola; la cantidad de cuotas no se cambia después.
+- Si se **borra el gasto que originó** un fijo o unas cuotas antes de que se repita, se borra también la serie (era un error de carga). Si ya se repitió, la serie sigue y se gestiona en Recurrentes.
 
 ## 6. Transferencias
 
@@ -74,6 +82,7 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - Tras generar, avanza `next_run_date` según la frecuencia; si supera el `end_date`, la recurrente se **desactiva** sola.
 - Se pueden **pausar/reactivar** (`is_active`) y editar/eliminar.
 - Las recurrentes generan transacciones en la moneda de la cuenta con tipo de cambio = 1 (no piden cotización).
+- Los **gastos fijos** y las **cuotas** (ver §5) son recurrentes mensuales de tipo `fixed` / `installments` que nacen al cargar el gasto. Aparecen en Recurrentes igual que las manuales (se pueden pausar o borrar) y usan un **día ancla** para no correrse en meses cortos. Las cuotas se desactivan solas al generar la última.
 
 ## 10. Recordatorios y notificaciones
 

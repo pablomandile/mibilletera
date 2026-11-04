@@ -32,7 +32,13 @@ const form = useForm({
     initial_balance: 0,
     color: '#22c55e',
     icon: 'cash',
+    accepts_installments: false,
     is_archived: false,
+});
+
+// En una cuenta nueva de tipo Tarjeta, las cuotas vienen tildadas.
+watch(() => form.type, (type, before) => {
+    if (!isEdit.value && before && type === 'card') form.accepts_installments = true;
 });
 
 watch(
@@ -46,6 +52,7 @@ watch(
             form.initial_balance = props.account.initial_balance;
             form.color = props.account.color;
             form.icon = props.account.icon;
+            form.accepts_installments = !!props.account.accepts_installments;
             form.is_archived = props.account.is_archived;
         } else {
             form.reset();
@@ -147,6 +154,11 @@ const remove = async () => {
                                 :style="{ backgroundColor: c }" @click="form.color = c" />
                         </div>
                     </div>
+
+                    <label class="flex items-start gap-2 text-sm">
+                        <input type="checkbox" v-model="form.accepts_installments" class="mt-0.5 rounded border-surface-300 dark:border-surface-700 text-primary focus:ring-primary" />
+                        <span>Acepta cuotas <span class="block text-xs text-surface-500">Al cargar un gasto con esta cuenta se puede elegir en cuántas cuotas.</span></span>
+                    </label>
 
                     <label v-if="isEdit" class="flex items-center gap-2 text-sm">
                         <input type="checkbox" v-model="form.is_archived" class="rounded border-surface-300 dark:border-surface-700 text-primary focus:ring-primary" />

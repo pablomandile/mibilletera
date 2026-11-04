@@ -29,6 +29,7 @@ class AccountController extends Controller
                 'balance' => $a->currentBalance(),
                 'color' => $a->color,
                 'icon' => $a->icon,
+                'accepts_installments' => $a->accepts_installments,
                 'is_archived' => $a->is_archived,
             ]);
 

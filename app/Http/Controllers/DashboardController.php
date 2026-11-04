@@ -34,6 +34,7 @@ class DashboardController extends Controller
                 'category:id,name,icon_type,icon_value,color',
                 'account:id,name',
                 'toAccount:id,name',
+                'recurring:id,kind,is_active',
             ])
             ->whereBetween('transaction_date', [$start, $end])
             ->orderByDesc('transaction_date')

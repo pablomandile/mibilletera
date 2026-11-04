@@ -42,6 +42,9 @@ class TransactionController extends Controller
                 'photo_url' => $transaction->photo_url,
                 'currency_code' => $transaction->currency_code,
                 'transfer_currency' => $transaction->transfer_currency,
+                'is_fixed' => $transaction->isFixed(),
+                'installment_number' => $transaction->installment_number,
+                'installments_total' => $transaction->installments_total,
             ],
         ]);
     }
@@ -94,6 +97,7 @@ class TransactionController extends Controller
                     'category:id,name,icon_type,icon_value,color',
                     'account:id,name',
                     'toAccount:id,name',
+                    'recurring:id,kind,is_active',
                 ])
                 ->whereIn('type', ['income', 'expense'])
                 ->whereRaw("note like ? escape '!'", [$like])
@@ -129,7 +133,7 @@ class TransactionController extends Controller
             'accounts' => $user->accounts()
                 ->where('is_archived', false)
                 ->orderBy('sort_order')
-                ->get(['id', 'name', 'type', 'currency_code', 'color', 'icon']),
+                ->get(['id', 'name', 'type', 'currency_code', 'color', 'icon', 'accepts_installments']),
             'currencies' => Currency::orderBy('code')->get(['code', 'name', 'symbol']),
             'defaultCurrency' => $user->default_currency,
         ];

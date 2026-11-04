@@ -10,12 +10,13 @@ class Account extends Model
 {
     protected $fillable = [
         'user_id', 'name', 'type', 'currency_code',
-        'initial_balance', 'color', 'icon', 'is_archived', 'sort_order',
+        'initial_balance', 'color', 'icon', 'accepts_installments', 'is_archived', 'sort_order',
     ];
 
     protected $casts = [
         'initial_balance' => 'decimal:2',
         'is_archived' => 'boolean',
+        'accepts_installments' => 'boolean',
         'sort_order' => 'integer',
     ];
 

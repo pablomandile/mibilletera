@@ -47,6 +47,7 @@ class AccountActions
             'initial_balance' => ['required', 'numeric'],
             'color' => ['nullable', 'string', 'max:20'],
             'icon' => ['nullable', 'string', 'max:40'],
+            'accepts_installments' => ['boolean'],
             'is_archived' => ['boolean'],
         ])->validate();
     }

@@ -31,9 +31,9 @@ const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };
 </script>
 
 <template>
-    <Head title="Cuentas" />
+    <Head title="Cuentas y métodos de pago" />
 
-    <AppLayout title="Cuentas">
+    <AppLayout title="Cuentas y métodos de pago">
         <div class="mx-auto max-w-2xl space-y-4">
             <div class="space-y-2">
                 <button
@@ -46,7 +46,7 @@ const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };
                     <CategoryIcon :icon-value="acc.icon" :color="acc.color" :size="44" :icon-size="24" />
                     <div class="min-w-0 flex-1">
                         <p class="font-medium break-words hyphens-auto">{{ acc.name }}</p>
-                        <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}</p>
+                        <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}<template v-if="acc.accepts_installments"> · Acepta cuotas</template></p>
                     </div>
                     <span class="shrink-0 whitespace-nowrap font-semibold tabular-nums" :class="acc.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">
                         {{ money(acc.balance, acc.currency_code) }}
@@ -74,7 +74,7 @@ const openEdit = (acc) => { editing.value = acc; showDialog.value = true; };
                     <CategoryIcon :icon-value="acc.icon" :color="acc.color" :size="40" :icon-size="22" />
                     <div class="min-w-0 flex-1">
                         <p class="font-medium break-words hyphens-auto">{{ acc.name }}</p>
-                        <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}</p>
+                        <p class="text-xs text-surface-500">{{ TYPE_LABELS[acc.type] }} · {{ acc.currency_code }}<template v-if="acc.accepts_installments"> · Acepta cuotas</template></p>
                     </div>
                     <span class="shrink-0 whitespace-nowrap text-sm tabular-nums text-surface-500">{{ money(acc.balance, acc.currency_code) }}</span>
                 </button>

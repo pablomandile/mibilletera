@@ -3,12 +3,17 @@
 namespace App\Actions;
 
 use App\Models\Account;
+use App\Models\RecurringTransaction;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\RecurringGenerator;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 /**
  * Altas, cambios y bajas de movimientos. La usan el controlador de siempre y la
@@ -17,6 +22,8 @@ use Illuminate\Validation\Rule;
  */
 class TransactionActions
 {
+    public function __construct(private RecurringGenerator $generator) {}
+
     public function create(User $user, array $input, ?UploadedFile $photo = null): Transaction
     {
         if (($input['type'] ?? null) === 'transfer') {
@@ -30,11 +37,31 @@ class TransactionActions
         $account = Account::where('user_id', $user->id)->findOrFail($data['account_id']);
 
         $attributes = $this->expenseIncomeAttributes($data, $account);
+        $installments = (int) ($data['installments'] ?? 1);
+        $fixed = (bool) ($data['is_fixed'] ?? false);
+        $installmentAmount = null;
+
+        if ($installments > 1) {
+            $installmentAmount = $this->checkInstallments($data, $account, $installments, $fixed);
+            // La cuota 1 se lleva los centavos del redondeo: 100 en 3 = 33,34 + 33,33 + 33,33.
+            $attributes['amount'] = round((float) $data['amount'] - ($installments - 1) * $installmentAmount, 2);
+        }
+
         $attributes['photo_path'] = $photo
             ? $photo->store('transactions/'.$user->id, 'public')
             : null;
 
-        return $user->transactions()->create($attributes);
+        return DB::transaction(function () use ($user, $attributes, $installments, $installmentAmount, $fixed) {
+            $transaction = $user->transactions()->create($attributes);
+
+            if ($installmentAmount !== null) {
+                $this->startSeries($user, $transaction, 'installments', $installmentAmount, $installments);
+            } elseif ($fixed) {
+                $this->startSeries($user, $transaction, 'fixed', (float) $transaction->amount);
+            }
+
+            return $transaction;
+        });
     }
 
     public function update(User $user, Transaction $transaction, array $input, ?UploadedFile $photo = null): Transaction
@@ -45,6 +72,10 @@ class TransactionActions
 
             // Si venía con foto (era gasto/ingreso), se descarta al pasar a transferencia.
             $this->deletePhoto($transaction);
+            // Y si era un gasto fijo, deja de repetirse.
+            if ($transaction->isFixed()) {
+                $transaction->recurring->update(['is_active' => false]);
+            }
 
             $transaction->update($this->transferAttributes($data, $from, $to));
 
@@ -62,15 +93,151 @@ class TransactionActions
         }
         // Si no viene foto nueva, se conserva la existente (no se toca photo_path).
 
-        $transaction->update($attributes);
+        return DB::transaction(function () use ($user, $transaction, $attributes, $data) {
+            $previousDate = $transaction->transaction_date->copy();
+            $wasFixed = $transaction->isFixed();
+            // Un cliente viejo (o una operación encolada antes de esto) no manda el
+            // campo: entonces no se toca la serie.
+            $wantsFixed = array_key_exists('is_fixed', $data) && $data['is_fixed'] !== null
+                ? (bool) $data['is_fixed']
+                : $wasFixed;
 
-        return $transaction;
+            $transaction->update($attributes);
+
+            // Una cuota se corrige sola; la cantidad de cuotas no se edita.
+            if ($transaction->installment_number) {
+                return $transaction;
+            }
+
+            if ($wasFixed && ! $wantsFixed) {
+                // Se dio de baja: esta fue la última repetición.
+                $transaction->recurring->update(['is_active' => false]);
+            } elseif ($wasFixed) {
+                $this->updateFixedSeries($transaction, $previousDate);
+            } elseif ($wantsFixed) {
+                $this->startSeries($user, $transaction, 'fixed', (float) $transaction->amount);
+            }
+
+            return $transaction;
+        });
     }
 
     public function delete(User $user, Transaction $transaction): void
     {
         $this->deletePhoto($transaction);
-        $transaction->delete();
+
+        DB::transaction(function () use ($transaction) {
+            $series = $transaction->recurring;
+            $transaction->delete();
+
+            // Se borró el gasto que le dio origen antes de que se repitiera: era un
+            // error de carga, así que no quedan cuotas ni repeticiones fantasma.
+            if ($series && $series->kind !== 'manual' && ! $series->transactions()->exists()) {
+                $series->delete();
+            }
+        });
+    }
+
+    /**
+     * Valida una compra en cuotas y devuelve el importe de cada cuota.
+     */
+    private function checkInstallments(array $data, Account $account, int $installments, bool $fixed): float
+    {
+        $error = match (true) {
+            $data['type'] !== 'expense' => 'Solo un gasto se puede pagar en cuotas.',
+            ! $account->accepts_installments => 'Esta cuenta no acepta cuotas.',
+            $fixed => 'Un gasto en cuotas no puede ser también gasto fijo.',
+            default => null,
+        };
+        if ($error) {
+            throw ValidationException::withMessages(['installments' => $error]);
+        }
+
+        $amount = round((float) $data['amount'] / $installments, 2);
+        if ($amount <= 0) {
+            throw ValidationException::withMessages(['installments' => 'El monto es muy chico para tantas cuotas.']);
+        }
+
+        return $amount;
+    }
+
+    /**
+     * Arma la serie mensual de un gasto fijo o en cuotas a partir del primer
+     * gasto, y genera ya las repeticiones vencidas (si se cargó con fecha vieja).
+     */
+    private function startSeries(User $user, Transaction $transaction, string $kind, float $amount, ?int $installments = null): RecurringTransaction
+    {
+        $date = $transaction->transaction_date->copy()->startOfDay();
+
+        $series = new RecurringTransaction([
+            'account_id' => $transaction->account_id,
+            'category_id' => $transaction->category_id,
+            'type' => $transaction->type,
+            'kind' => $kind,
+            'amount' => $amount,
+            'currency_code' => $transaction->currency_code,
+            'exchange_rate' => $transaction->exchange_rate,
+            'note' => $transaction->note,
+            'frequency' => 'monthly',
+            'interval' => 1,
+            'anchor_day' => $date->day,
+            'installments_total' => $installments,
+            'next_installment' => $installments ? 2 : null,
+            'last_generated_at' => $date,
+            'is_active' => true,
+        ]);
+        $series->next_run_date = $series->advance($date);
+
+        if ($installments) {
+            $end = $date;
+            for ($i = 1; $i < $installments; $i++) {
+                $end = $series->advance($end);
+            }
+            $series->end_date = $end;
+        }
+
+        $user->recurringTransactions()->save($series);
+
+        $transaction->update([
+            'recurring_transaction_id' => $series->id,
+            'installment_number' => $installments ? 1 : null,
+            'installments_total' => $installments,
+        ]);
+        $transaction->setRelation('recurring', $series);
+
+        $this->generator->process($series);
+
+        return $series;
+    }
+
+    /**
+     * Un gasto fijo editado que sigue siendo fijo: los cambios valen para las
+     * repeticiones que vienen, no para las ya generadas.
+     */
+    private function updateFixedSeries(Transaction $transaction, Carbon $previousDate): void
+    {
+        $series = $transaction->recurring;
+
+        $series->fill([
+            'account_id' => $transaction->account_id,
+            'category_id' => $transaction->category_id,
+            'type' => $transaction->type,
+            'amount' => $transaction->amount,
+            'currency_code' => $transaction->currency_code,
+            'exchange_rate' => $transaction->exchange_rate,
+            'note' => $transaction->note,
+        ]);
+
+        // Si todavía no se repitió nunca y se corrigió la fecha, la serie se corre con ella.
+        $date = $transaction->transaction_date->copy()->startOfDay();
+        if (! $date->isSameDay($previousDate) && $series->transactions()->count() === 1) {
+            $series->anchor_day = $date->day;
+            $series->last_generated_at = $date;
+            $series->next_run_date = $series->advance($date);
+        }
+
+        $series->save();
+        $this->generator->process($series);
     }
 
     private function validateExpenseIncome(array $input, User $user): array
@@ -84,6 +251,8 @@ class TransactionActions
             'note' => ['nullable', 'string', 'max:255'],
             'transaction_date' => ['required', 'date'],
             'photo' => ['nullable', 'image', 'max:5120'],
+            'is_fixed' => ['nullable', 'boolean'],
+            'installments' => ['nullable', 'integer', 'min:1', 'max:60'],
         ])->validate();
     }
 
