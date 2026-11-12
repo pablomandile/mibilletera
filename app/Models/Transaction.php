@@ -59,6 +59,13 @@ class Transaction extends Model
         return $rec !== null && $rec->kind === 'fixed' && $rec->is_active;
     }
 
+    // Es una ocurrencia de un gasto fijo, vigente o dado de baja: así cuenta en
+    // los gráficos e informes de su mes aunque después se haya cortado la serie.
+    public function inFixedSeries(): bool
+    {
+        return $this->recurring?->kind === 'fixed';
+    }
+
     public function getPhotoUrlAttribute(): ?string
     {
         return $this->photo_path ? Storage::disk('public')->url($this->photo_path) : null;
@@ -101,7 +108,7 @@ class Transaction extends Model
             'is_fixed' => $this->isFixed(),
             // Es parte de un gasto fijo (vigente o dado de baja): muestra el ícono
             // de repetición, verde si está pagado.
-            'fixed_series' => $this->recurring?->kind === 'fixed',
+            'fixed_series' => $this->inFixedSeries(),
             'is_paid' => $this->is_paid,
             'installment_number' => $this->installment_number,
             'installments_total' => $this->installments_total,

@@ -83,6 +83,35 @@
         </table>
     </div>
 
+    {{-- Gastos fijos --}}
+    <div class="section">
+        <h2>Gastos fijos</h2>
+        @if (count($fixed['items']))
+            <p style="margin: 0 0 6px;">
+                <strong>{{ $money($fixed['total']) }}</strong>
+                <span class="muted">· {{ number_format($fixed['pct'], 1, ',', '.') }}% del gasto del mes</span>
+                @if ($fixed['delta'] !== null)
+                    <span class="{{ $fixed['delta'] <= 0 ? 'income' : 'expense' }}">· {{ $fixed['delta'] >= 0 ? '▲' : '▼' }} {{ abs($fixed['delta']) }}% vs mes anterior</span>
+                @endif
+                <span class="muted">· Pagado {{ $money($fixed['paid']) }} · Pendiente {{ $money($fixed['pending']) }}</span>
+            </p>
+            <table class="striped">
+                <tr><th>Gasto</th><th>Categoría</th><th class="right">Día</th><th>Estado</th><th class="right">Monto</th></tr>
+                @foreach ($fixed['items'] as $f)
+                    <tr>
+                        <td>{{ $f['name'] }}</td>
+                        <td class="muted">{{ $f['category'] }}</td>
+                        <td class="right">{{ (int) substr($f['date'], 8, 2) }}</td>
+                        <td class="{{ $f['isPaid'] ? 'income' : 'muted' }}">{{ $f['isPaid'] ? 'Pagado' : 'Impago' }}</td>
+                        <td class="right">{{ $money($f['total']) }}</td>
+                    </tr>
+                @endforeach
+            </table>
+        @else
+            <p class="muted">Sin gastos fijos este mes.</p>
+        @endif
+    </div>
+
     @php
         $breakdowns = [['Gastos por categoría', $expenseByCategory, 'Sin gastos este mes.']];
         if ($hasSupercategories) {

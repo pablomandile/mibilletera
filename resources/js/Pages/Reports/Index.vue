@@ -1,13 +1,14 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
 import { Head, router } from '@inertiajs/vue3';
-import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconFileDownload } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconFileDownload, IconRepeat } from '@tabler/icons-vue';
 import { computed } from 'vue';
 import { formatMoney, formatMoneyWrappable } from '@/money';
 
 const props = defineProps({
     period: { type: Object, required: true },
     totals: { type: Object, required: true },
+    fixed: { type: Object, default: () => ({ total: 0, variable: 0, paid: 0, pending: 0, pct: 0, items: [], prevTotal: 0, delta: null }) },
     expenseByCategory: { type: Array, default: () => [] },
     incomeByCategory: { type: Array, default: () => [] },
     baseSymbol: { type: String, default: '$' },
@@ -23,6 +24,13 @@ const delta = (current, prev) => {
 };
 const expenseDelta = computed(() => delta(props.totals.expense, props.totals.prevExpense));
 const incomeDelta = computed(() => delta(props.totals.income, props.totals.prevIncome));
+
+// Ancho de cada tramo de la barra fijos | variables (la suma es el gasto del mes).
+const fixedShare = computed(() => {
+    const all = props.fixed.total + props.fixed.variable;
+    return all > 0 ? (props.fixed.total / all) * 100 : 0;
+});
+const day = (date) => Number(date.slice(8, 10));
 </script>
 
 <template>
@@ -63,6 +71,73 @@ const incomeDelta = computed(() => delta(props.totals.income, props.totals.prevI
                         <p class="text-xs text-surface-500">Balance</p>
                         <p class="mt-1 font-semibold break-words hyphens-auto" :class="totals.balance >= 0 ? 'text-surface-900 dark:text-surface-100' : 'text-rose-500'">{{ moneyTotal(totals.balance) }}</p>
                     </div>
+                </div>
+            </div>
+
+            <!-- Gastos fijos -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-start justify-between gap-3 mb-3">
+                    <div class="flex items-center gap-2">
+                        <IconRepeat :size="18" class="text-violet-500" />
+                        <h2 class="font-semibold">Gastos fijos</h2>
+                    </div>
+                    <div v-if="fixed.items.length" class="text-right">
+                        <p class="font-semibold whitespace-nowrap tabular-nums">{{ money(fixed.total) }}</p>
+                        <p v-if="fixed.delta !== null" class="text-2xs" :class="fixed.delta <= 0 ? 'text-emerald-500' : 'text-rose-500'">
+                            {{ fixed.delta >= 0 ? '▲' : '▼' }} {{ Math.abs(fixed.delta) }}% vs mes anterior
+                        </p>
+                    </div>
+                </div>
+
+                <template v-if="fixed.items.length">
+                    <!-- Qué parte del gasto del mes es fija -->
+                    <p class="text-sm text-surface-500 mb-2">Son el <span class="font-semibold text-surface-900 dark:text-surface-100">{{ fixed.pct }}%</span> de lo que gastaste en el mes.</p>
+                    <div class="flex h-2 gap-0.5" role="img" :aria-label="`Fijos ${fixed.pct}%, variables ${Math.round((100 - fixed.pct) * 10) / 10}%`">
+                        <div v-if="fixed.total > 0" class="h-full rounded-full bg-violet-500" :style="{ width: fixedShare + '%' }"></div>
+                        <div v-if="fixed.variable > 0" class="h-full flex-1 rounded-full bg-rose-500"></div>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-surface-500">
+                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-violet-500"></span>Fijos {{ money(fixed.total) }}</span>
+                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full bg-rose-500"></span>Variables {{ money(fixed.variable) }}</span>
+                    </div>
+
+                    <!-- Pagado / pendiente -->
+                    <div class="mt-4 grid grid-cols-2 gap-3">
+                        <div class="rounded-xl bg-surface-100 dark:bg-surface-800 px-3 py-2">
+                            <p class="text-xs text-surface-500">Pagado</p>
+                            <p class="font-semibold break-words hyphens-auto">{{ moneyTotal(fixed.paid) }}</p>
+                        </div>
+                        <div class="rounded-xl bg-surface-100 dark:bg-surface-800 px-3 py-2">
+                            <p class="text-xs text-surface-500">Pendiente</p>
+                            <p class="font-semibold break-words hyphens-auto" :class="fixed.pending > 0 ? 'text-amber-600 dark:text-amber-400' : ''">{{ moneyTotal(fixed.pending) }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Uno por uno -->
+                    <ul class="mt-4 divide-y divide-surface-200 dark:divide-surface-800">
+                        <li v-for="f in fixed.items" :key="f.id" class="flex items-center gap-3 py-2.5">
+                            <IconRepeat
+                                :size="18"
+                                class="shrink-0"
+                                :class="f.isPaid ? 'text-emerald-500' : 'text-surface-400'"
+                                :aria-label="f.isPaid ? 'Pagado' : 'Impago'"
+                            />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-medium break-words hyphens-auto">{{ f.name }}</p>
+                                <p class="text-xs text-surface-500 break-words hyphens-auto">
+                                    {{ f.category }} · día {{ day(f.date) }}<template v-if="!f.active"> · ya no se repite</template>
+                                </p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-sm font-semibold whitespace-nowrap tabular-nums">{{ money(f.total) }}</p>
+                                <p class="text-2xs" :class="f.isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-surface-500'">{{ f.isPaid ? 'Pagado' : 'Impago' }}</p>
+                            </div>
+                        </li>
+                    </ul>
+                </template>
+                <div v-else class="py-6 text-center space-y-1">
+                    <p class="text-surface-500">Sin gastos fijos este mes.</p>
+                    <p class="text-xs text-surface-500">Al cargar un gasto que se repite (alquiler, servicios, suscripciones), tildá «Gasto fijo».</p>
                 </div>
             </div>
 

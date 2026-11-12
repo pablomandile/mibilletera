@@ -81,6 +81,21 @@ class DemoSeederTest extends TestCase
         $this->assertSame(1, $user->alerts()->whereNull('read_at')->count());
     }
 
+    public function test_the_demo_shows_fixed_expenses_in_reports(): void
+    {
+        $user = $this->demo();
+        $fixed = app(\App\Services\MonthlyReport::class)->build($user, now()->subMonth())['fixed'];
+
+        // Alquiler, Prepaga, Gimnasio y Netflix (el sueldo es un ingreso fijo).
+        $this->assertCount(4, $fixed['items']);
+        $this->assertGreaterThan(0, $fixed['pct']);
+        $this->assertSame(0.0, $fixed['pending']);
+
+        // Los de la tarjeta de este mes todavía no se pagaron.
+        $current = app(\App\Services\MonthlyReport::class)->build($user, now())['fixed'];
+        $this->assertGreaterThan(0, $current['pending']);
+    }
+
     public function test_the_demo_user_can_see_charts_and_download_the_pdf(): void
     {
         $this->actingAs($this->demo())->get('/charts')->assertOk();

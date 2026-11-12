@@ -4,7 +4,7 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { formatMoney } from '@/money';
-import { IconChevronLeft, IconChevronRight, IconFileDownload } from '@tabler/icons-vue';
+import { IconChevronLeft, IconChevronRight, IconFileDownload, IconRepeat } from '@tabler/icons-vue';
 
 const props = defineProps({
     range: { type: String, default: 'month' },
@@ -13,9 +13,10 @@ const props = defineProps({
     byCategory: { type: Array, default: () => [] },
     bySupercategory: { type: Array, default: () => [] },
     hasSupercategories: { type: Boolean, default: false },
+    fixed: { type: Object, default: () => ({ total: 0, variable: 0, paid: 0, pending: 0, pct: 0, items: [] }) },
     totals: { type: Object, default: () => ({ income: 0, expense: 0 }) },
     trend: { type: Object, default: () => ({ labels: [], expense: [], income: [] }) },
-    yearly: { type: Object, default: () => ({ labels: [], current: [], previous: [], year: null }) },
+    yearly: { type: Object, default: () => ({ labels: [], current: [], previous: [], fixed: [], variable: [], year: null }) },
     savings: { type: Object, default: () => ({ monthly: [], accumulated: [] }) },
     currencySymbol: { type: String, default: '$' },
 });
@@ -121,6 +122,43 @@ const yearlyData = computed(() => ({
 const sum = (values) => values.reduce((s, v) => s + (v ?? 0), 0);
 const yearlyTotal = computed(() => sum(props.yearly.current));
 
+// ---- Gastos fijos ----
+const FIXED = '#8b5cf6';
+const VARIABLE = '#f43f5e';
+
+// Ancho del tramo de fijos en la barra fijos | variables del período.
+const fixedShare = computed(() => {
+    const all = props.fixed.total + props.fixed.variable;
+    return all > 0 ? (props.fixed.total / all) * 100 : 0;
+});
+// En un mes o una semana cada fijo aparece una vez (con su día); en el año, sumado.
+const fixedDetail = (f) =>
+    props.range === 'year'
+        ? `${f.category} · ${f.count} ${f.count === 1 ? 'mes' : 'meses'}`
+        : `${f.category} · día ${Number(f.date.slice(8, 10))}`;
+const fixedStatus = (f) => (f.isPaid ? 'Pagado' : props.range === 'year' ? `Falta ${money(f.pending)}` : 'Impago');
+
+// Barras apiladas: cuánto de lo gastado cada mes del año fue fijo. El tramo de
+// variables arranca 2px más arriba, así se separa del de fijos.
+const fixedYearData = computed(() => ({
+    labels: props.yearly.labels,
+    datasets: [
+        { label: 'Fijos', data: props.yearly.fixed, backgroundColor: FIXED, borderRadius: 4, maxBarThickness: 28 },
+        {
+            label: 'Variables',
+            data: props.yearly.variable,
+            backgroundColor: VARIABLE,
+            borderColor: 'transparent',
+            borderWidth: { bottom: 2 },
+            borderSkipped: false,
+            borderRadius: 4,
+            maxBarThickness: 28,
+        },
+    ],
+}));
+const fixedYearTotal = computed(() => sum(props.yearly.fixed ?? []));
+const hasFixedYear = computed(() => fixedYearTotal.value > 0);
+
 // Ahorro: barras con lo que sobró cada mes y línea con el acumulado del año.
 const savingsData = computed(() => ({
     labels: props.yearly.labels,
@@ -184,6 +222,24 @@ const yearlyOptions = {
     plugins: {
         ...baseOptions.plugins,
         tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y)}` } },
+    },
+};
+
+const fixedYearOptions = {
+    ...yearlyOptions,
+    scales: {
+        x: { ...axisOptions.scales.x, stacked: true },
+        y: { ...axisOptions.scales.y, stacked: true },
+    },
+    plugins: {
+        ...yearlyOptions.plugins,
+        tooltip: {
+            mode: 'index',
+            callbacks: {
+                label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y)}`,
+                footer: (items) => `Total: ${money(items.reduce((s, i) => s + i.parsed.y, 0))}`,
+            },
+        },
     },
 };
 
@@ -288,6 +344,51 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                 <p v-else class="text-center text-surface-500 py-10">Sin gastos en este período.</p>
             </div>
 
+            <!-- Gastos fijos del período -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold">Gastos fijos</h2>
+                    <span v-if="fixed.items.length" class="text-sm font-semibold whitespace-nowrap tabular-nums text-violet-600 dark:text-violet-400">{{ money(fixed.total) }}</span>
+                </div>
+
+                <template v-if="fixed.items.length">
+                    <p class="text-sm text-surface-500 mb-2">
+                        Son el <span class="font-semibold text-surface-900 dark:text-surface-100">{{ fixed.pct }}%</span> de tus gastos<template v-if="fixed.pending > 0"> · falta pagar <span class="font-semibold text-surface-900 dark:text-surface-100 whitespace-nowrap">{{ money(fixed.pending) }}</span></template>.
+                    </p>
+                    <div class="flex h-2 gap-0.5" role="img" :aria-label="`Fijos ${fixed.pct}%, variables ${Math.round((100 - fixed.pct) * 10) / 10}%`">
+                        <div v-if="fixed.total > 0" class="h-full rounded-full" :style="{ width: fixedShare + '%', backgroundColor: FIXED }"></div>
+                        <div v-if="fixed.variable > 0" class="h-full flex-1 rounded-full" :style="{ backgroundColor: VARIABLE }"></div>
+                    </div>
+                    <div class="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs text-surface-500">
+                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: FIXED }"></span>Fijos {{ money(fixed.total) }}</span>
+                        <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: VARIABLE }"></span>Variables {{ money(fixed.variable) }}</span>
+                    </div>
+
+                    <ul class="mt-3 max-h-72 overflow-y-auto divide-y divide-surface-200 dark:divide-surface-800">
+                        <li v-for="f in fixed.items" :key="f.id" class="flex items-center gap-3 py-2">
+                            <IconRepeat
+                                :size="18"
+                                class="shrink-0"
+                                :class="f.isPaid ? 'text-emerald-500' : 'text-surface-400'"
+                                :aria-label="f.isPaid ? 'Pagado' : 'Impago'"
+                            />
+                            <div class="min-w-0 flex-1">
+                                <p class="text-sm font-medium break-words hyphens-auto">{{ f.name }}</p>
+                                <p class="text-xs text-surface-500 break-words hyphens-auto">{{ fixedDetail(f) }}</p>
+                            </div>
+                            <div class="shrink-0 text-right">
+                                <p class="text-sm font-medium whitespace-nowrap tabular-nums">{{ money(f.total) }}</p>
+                                <p class="text-2xs whitespace-nowrap" :class="f.isPaid ? 'text-emerald-600 dark:text-emerald-400' : 'text-surface-500'">{{ fixedStatus(f) }}</p>
+                            </div>
+                        </li>
+                    </ul>
+                </template>
+                <div v-else class="py-8 text-center space-y-1">
+                    <p class="text-surface-500">Sin gastos fijos en este período.</p>
+                    <p class="text-xs text-surface-500">Al cargar un gasto que se repite (alquiler, servicios, suscripciones), tildá «Gasto fijo».</p>
+                </div>
+            </div>
+
             <!-- Barras: ingresos vs gastos -->
             <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
                 <h2 class="font-semibold mb-3">Ingresos vs gastos por {{ range === 'year' ? 'mes' : 'día' }}</h2>
@@ -313,6 +414,19 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                 <div class="h-56">
                     <Chart type="line" :data="yearlyData" :options="yearlyOptions" class="h-56" />
                 </div>
+            </div>
+
+            <!-- Barras apiladas: fijos y variables de cada mes del año -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-1">
+                    <h2 class="font-semibold">Fijos y variables {{ yearly.year }}</h2>
+                    <span v-if="hasFixedYear" class="text-sm font-semibold whitespace-nowrap tabular-nums text-violet-600 dark:text-violet-400">{{ money(fixedYearTotal) }}</span>
+                </div>
+                <p class="text-xs text-surface-500 mb-3">Cuánto de lo que gastaste cada mes fue fijo.</p>
+                <div v-if="hasFixedYear" class="h-56">
+                    <Chart type="bar" :data="fixedYearData" :options="fixedYearOptions" class="h-56" />
+                </div>
+                <p v-else class="text-center text-surface-500 py-10">Sin gastos fijos en {{ yearly.year }}.</p>
             </div>
 
             <!-- Ahorro acumulado del año -->

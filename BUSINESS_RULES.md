@@ -99,6 +99,9 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - **Inicio** e **Informes** trabajan por **mes calendario**, con navegación mes anterior/siguiente (no se puede avanzar más allá del mes actual en Inicio).
 - **Gráficos** admite tres rangos: **Semana**, **Mes** (por día) y **Año** (por mes).
 - **Informes** compara ingresos y gastos del mes contra el **mes anterior** (variación ▲/▼ %) y muestra el desglose por categoría de gastos e ingresos.
+- **Gastos fijos** en Informes, Gráficos y el PDF del mes: cuánto suman, qué **% del gasto** del período son (barra fijos | variables), cuánto está **pagado** y cuánto **pendiente**, y cada fijo con su monto y su marca de pago. Informes y el PDF los comparan contra el mes anterior. En Gráficos con el rango **Año** cada fijo aparece una vez, sumado, con los meses que tuvo y lo que falta pagar; además, un gráfico de barras apiladas muestra **fijos y variables de cada mes** del año.
+  - Cuenta como fijo todo gasto que pertenece a una serie de tipo «Gasto fijo», **aunque después se haya dado de baja** (sigue contando en los meses en que se pagó). Las cuotas, las recurrentes manuales y los ingresos fijos no entran.
+  - El nombre de cada fijo es la **nota de la serie** (si no tiene, la de la repetición, y si tampoco, la categoría).
 
 ## 12. Autenticación y permisos
 

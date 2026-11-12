@@ -48,7 +48,7 @@ class ChartsController extends Controller
         };
 
         $transactions = $user->transactions()
-            ->with('category:id,name,color,supercategory_id')
+            ->with(['category:id,name,color,supercategory_id', 'recurring:id,kind,is_active,note'])
             ->whereBetween('transaction_date', [$start, $end])
             ->get();
 
@@ -73,8 +73,9 @@ class ChartsController extends Controller
 
         // Torta "A vuelo de pájaro": el mismo gasto, sumado por supercategoría. Lo que
         // está en categorías sin agrupar va junto en una porción gris.
+        $report = app(MonthlyReport::class);
         $supercategories = $user->supercategories()->get(['id', 'name', 'color'])->keyBy('id');
-        $bySupercategory = app(MonthlyReport::class)->bySupercategory($expenses, $supercategories);
+        $bySupercategory = $report->bySupercategory($expenses, $supercategories);
 
         // Tendencia por bucket
         $labels = [];
@@ -102,16 +103,23 @@ class ChartsController extends Controller
         // anterior. Los meses que todavía no llegaron van en null, así la línea
         // del año en curso se corta en vez de caer a cero.
         $year = (int) $start->format('Y');
-        $yearTotals = $user->transactions()
+        $yearTxns = $user->transactions()
+            ->with('recurring:id,kind')
             ->whereIn('type', ['expense', 'income'])
             ->whereBetween('transaction_date', [Carbon::create($year - 1)->startOfYear(), Carbon::create($year)->endOfYear()])
-            ->get(['type', 'amount', 'exchange_rate', 'transaction_date'])
+            ->get(['type', 'amount', 'exchange_rate', 'transaction_date', 'recurring_transaction_id']);
+        $yearTotals = $yearTxns
             ->groupBy(fn ($t) => $t->type.'-'.$t->transaction_date->format('Y-n'))
             ->map(fn ($group) => (float) $group->sum($base));
+        // Lo que de ese gasto fue fijo, mes por mes.
+        $yearFixed = $yearTxns
+            ->filter(fn ($t) => $t->type === 'expense' && $t->inFixedSeries())
+            ->groupBy(fn ($t) => $t->transaction_date->format('Y-n'))
+            ->map(fn ($group) => round((float) $group->sum($base), 2));
 
         // Ahorro: lo que sobra cada mes (ingresos − gastos; un mes en rojo cuenta 0)
         // y su acumulado desde enero.
-        $yearly = ['labels' => [], 'current' => [], 'previous' => [], 'year' => $year];
+        $yearly = ['labels' => [], 'current' => [], 'previous' => [], 'fixed' => [], 'variable' => [], 'year' => $year];
         $savings = ['monthly' => [], 'accumulated' => []];
         $accumulated = 0.0;
         for ($m = 1; $m <= 12; $m++) {
@@ -120,16 +128,21 @@ class ChartsController extends Controller
 
             if (Carbon::create($year, $m, 1)->gt(now())) {
                 $yearly['current'][] = null;
+                $yearly['fixed'][] = null;
+                $yearly['variable'][] = null;
                 $savings['monthly'][] = null;
                 $savings['accumulated'][] = null;
                 continue;
             }
 
             $expense = $yearTotals->get("expense-$year-$m", 0.0);
+            $fixed = $yearFixed->get("$year-$m", 0.0);
             $saved = max($yearTotals->get("income-$year-$m", 0.0) - $expense, 0.0);
             $accumulated += $saved;
 
             $yearly['current'][] = $expense;
+            $yearly['fixed'][] = $fixed;
+            $yearly['variable'][] = max(round($expense - $fixed, 2), 0.0);
             $savings['monthly'][] = $saved;
             $savings['accumulated'][] = $accumulated;
         }
@@ -146,6 +159,7 @@ class ChartsController extends Controller
             'byCategory' => $byCategory,
             'bySupercategory' => $bySupercategory,
             'hasSupercategories' => $supercategories->isNotEmpty(),
+            'fixed' => $report->fixedExpenses($expenses),
             'totals' => [
                 'income' => (float) $incomes->sum($base),
                 'expense' => (float) $expenses->sum($base),

@@ -63,6 +63,11 @@ class MonthlyReport
                 'incomeDelta' => self::delta($current['income'], $previous['income']),
                 'expenseDelta' => self::delta($current['expense'], $previous['expense']),
             ],
+            'fixed' => [
+                ...$this->fixedExpenses($expenses),
+                'prevTotal' => $previous['fixed'],
+                'delta' => self::delta($current['fixed'], $previous['fixed']),
+            ],
             'expenseByCategory' => $this->breakdown($expenses),
             'incomeByCategory' => $this->breakdown($incomes),
             'hasSupercategories' => $supercategories->isNotEmpty(),
@@ -101,10 +106,59 @@ class MonthlyReport
             ->values();
     }
 
+    /**
+     * Los gastos fijos dentro de un conjunto de gastos: cuánto suman, qué parte
+     * del gasto son, cuánto está pagado y cuánto falta, y uno por serie (en un
+     * mes, cada fijo aparece una vez; en un año, sumado con la cantidad de meses).
+     * Espera cargadas `category` y `recurring` (con id, kind, is_active y note).
+     */
+    public function fixedExpenses(Collection $expenses): array
+    {
+        $fixed = $expenses->filter(fn ($t) => $t->inFixedSeries());
+
+        $all = round((float) $expenses->sum(self::base(...)), 2);
+        $total = round((float) $fixed->sum(self::base(...)), 2);
+        $pending = round((float) $fixed->where('is_paid', false)->sum(self::base(...)), 2);
+
+        $items = $fixed
+            ->groupBy('recurring_transaction_id')
+            ->map(function ($group) {
+                $last = $group->sortBy('transaction_date')->last();
+                $category = $last->category;
+
+                return [
+                    'id' => $last->recurring_transaction_id,
+                    // La nota de la serie es el nombre del fijo ("Alquiler"); la de cada
+                    // repetición puede variar ("Alquiler de marzo").
+                    'name' => $last->recurring->note ?: ($last->note ?: ($category?->name ?? 'Sin categoría')),
+                    'category' => $category?->name ?? 'Sin categoría',
+                    'color' => $category?->color ?? '#9ca3af',
+                    'total' => round((float) $group->sum(self::base(...)), 2),
+                    'pending' => round((float) $group->where('is_paid', false)->sum(self::base(...)), 2),
+                    'count' => $group->count(),
+                    'date' => $last->transaction_date->format('Y-m-d'),
+                    'isPaid' => $group->every(fn ($t) => $t->is_paid),
+                    'active' => (bool) $last->recurring->is_active,
+                ];
+            })
+            ->sortByDesc('total')
+            ->values()
+            ->all();
+
+        return [
+            'total' => $total,
+            'variable' => max(round($all - $total, 2), 0.0),
+            'paid' => round($total - $pending, 2),
+            'pending' => $pending,
+            'pct' => $all > 0 ? round($total / $all * 1000) / 10 : 0,
+            'items' => $items,
+        ];
+    }
+
     private function periodTotals(User $user, Carbon $start): array
     {
         $txns = $user->transactions()
-            ->with('category:id,name,color,supercategory_id')
+            ->with(['category:id,name,color,supercategory_id', 'recurring:id,kind,is_active,note'])
             ->whereBetween('transaction_date', [$start->copy()->startOfMonth(), $start->copy()->endOfMonth()])
             ->get();
 
@@ -116,6 +170,7 @@ class MonthlyReport
             'incomes' => $incomes,
             'income' => (float) $incomes->sum(self::base(...)),
             'expense' => (float) $expenses->sum(self::base(...)),
+            'fixed' => round((float) $expenses->filter(fn ($t) => $t->inFixedSeries())->sum(self::base(...)), 2),
         ];
     }
 

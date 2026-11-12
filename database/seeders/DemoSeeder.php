@@ -245,7 +245,7 @@ class DemoSeeder extends Seeder
         ];
 
         foreach ($items as [$type, $category, $account, $amount, $note, $day]) {
-            $this->user->recurringTransactions()->create([
+            $series = $this->user->recurringTransactions()->create([
                 'account_id' => $account->id,
                 'category_id' => $type === 'income' ? $this->income[$category] : $this->expense[$category],
                 'type' => $type,
@@ -260,6 +260,22 @@ class DemoSeeder extends Seeder
                 'next_run_date' => $next($day)->toDateString(),
                 'is_active' => true,
             ]);
+
+            // Los movimientos del año con esa nota son sus repeticiones: así Gráficos
+            // e Informes los muestran como gastos fijos.
+            $occurrences = $this->user->transactions()
+                ->where('category_id', $series->category_id)
+                ->where('account_id', $account->id)
+                ->where('note', 'like', $note.'%');
+            $occurrences->update(['recurring_transaction_id' => $series->id]);
+
+            // Los de la tarjeta se pagan con el resumen del mes que viene: los de
+            // este mes quedan impagos, para que se vea qué falta pagar.
+            if ($account->is($this->card)) {
+                (clone $occurrences)
+                    ->where('transaction_date', '>=', $this->today->copy()->startOfMonth())
+                    ->update(['is_paid' => false]);
+            }
         }
     }
 

@@ -32,6 +32,7 @@ class ReportsController extends Controller
                 'prevIncome' => $data['totals']['prevIncome'],
                 'prevExpense' => $data['totals']['prevExpense'],
             ],
+            'fixed' => $data['fixed'],
             'expenseByCategory' => $data['expenseByCategory'],
             'incomeByCategory' => $data['incomeByCategory'],
             'baseSymbol' => $data['symbol'],
