@@ -136,6 +136,29 @@ const fixedDetail = (f) =>
     props.range === 'year'
         ? `${f.category} · ${f.count} ${f.count === 1 ? 'mes' : 'meses'}`
         : `${f.category} · día ${Number(f.date.slice(8, 10))}`;
+// Torta de los fijos solos. Cada fijo lleva un color "al azar" que sale de su id
+// (ángulo de oro sobre el círculo de tonos): distintos entre sí, pero siempre el
+// mismo para el mismo fijo, así no cambia de color cada vez que se abre la página.
+const fixedColor = (id) => `hsl(${Math.round((id * 137.508) % 360)}, 68%, 55%)`;
+const fixedPct = (f) => (props.fixed.total ? Math.round((f.total / props.fixed.total) * 1000) / 10 : 0);
+const fixedDoughnutData = computed(() => ({
+    labels: props.fixed.items.map((f) => f.name),
+    datasets: [
+        {
+            data: props.fixed.items.map((f) => f.total),
+            backgroundColor: props.fixed.items.map((f) => fixedColor(f.id)),
+            borderWidth: 0,
+        },
+    ],
+}));
+const fixedDoughnutOptions = {
+    maintainAspectRatio: false,
+    cutout: '62%',
+    plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}` } },
+    },
+};
 const fixedStatus = (f) => (f.isPaid ? 'Pagado' : props.range === 'year' ? `Falta ${money(f.pending)}` : 'Impago');
 
 // Barras apiladas: cuánto de lo gastado cada mes del año fue fijo. El tramo de
@@ -364,7 +387,12 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                         <span class="flex items-center gap-1.5"><span class="h-2.5 w-2.5 rounded-full" :style="{ backgroundColor: VARIABLE }"></span>Variables {{ money(fixed.variable) }}</span>
                     </div>
 
-                    <ul class="mt-3 max-h-72 overflow-y-auto divide-y divide-surface-200 dark:divide-surface-800">
+                    <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
+                    <!-- Torta: solo los fijos, cada uno con su color -->
+                    <div class="relative h-56">
+                        <Chart type="doughnut" :data="fixedDoughnutData" :options="fixedDoughnutOptions" class="h-56" />
+                    </div>
+                    <ul class="max-h-72 overflow-y-auto divide-y divide-surface-200 dark:divide-surface-800">
                         <li v-for="f in fixed.items" :key="f.id" class="flex items-center gap-3 py-2">
                             <IconRepeat
                                 :size="18"
@@ -373,7 +401,10 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                                 :aria-label="f.isPaid ? 'Pagado' : 'Impago'"
                             />
                             <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium break-words hyphens-auto">{{ f.name }}</p>
+                                <p class="text-sm font-medium break-words hyphens-auto">
+                                    <span class="inline-block h-2.5 w-2.5 rounded-full mr-1.5 align-[1px]" :style="{ backgroundColor: fixedColor(f.id) }"></span>{{ f.name }}
+                                    <span class="text-xs font-normal text-surface-500">{{ fixedPct(f) }}%</span>
+                                </p>
                                 <p class="text-xs text-surface-500 break-words hyphens-auto">{{ fixedDetail(f) }}</p>
                             </div>
                             <div class="shrink-0 text-right">
@@ -382,6 +413,7 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                             </div>
                         </li>
                     </ul>
+                    </div>
                 </template>
                 <div v-else class="py-8 text-center space-y-1">
                     <p class="text-surface-500">Sin gastos fijos en este período.</p>
