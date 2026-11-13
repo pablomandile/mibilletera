@@ -35,8 +35,6 @@ class ReportsController extends Controller
             'fixed' => $data['fixed'],
             'expenseByCategory' => $data['expenseByCategory'],
             'incomeByCategory' => $data['incomeByCategory'],
-            'bySupercategory' => $data['bySupercategory'],
-            'hasSupercategories' => $data['hasSupercategories'],
             'baseSymbol' => $data['symbol'],
         ]);
     }

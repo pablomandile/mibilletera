@@ -35,6 +35,7 @@
         .daily .col { background: #f43f5e; border-radius: 2px 2px 0 0; }
         .daily .lbl { font-size: 7px; color: #71717a; padding-top: 2px; }
         .striped tr:nth-child(even) td { background: #fafafa; }
+        .donut { width: 130px; vertical-align: top; padding: 0 10px 0 0; }
     </style>
 </head>
 <body>
@@ -95,11 +96,17 @@
                 @endif
                 <span class="muted">· Pagado {{ $money($fixed['paid']) }} · Pendiente {{ $money($fixed['pending']) }}</span>
             </p>
+            @php
+                $fixedSlices = array_map(fn ($f) => ['name' => $f['name'], 'total' => $f['total'], 'color' => \App\Support\DonutSvg::fixedColor($f['id'])], $fixed['items']);
+            @endphp
+            <table><tr>
+            <td class="donut"><img src="{{ \App\Support\DonutSvg::dataUri($fixedSlices) }}" width="120" height="120"></td>
+            <td style="vertical-align: top;">
             <table class="striped">
                 <tr><th>Gasto</th><th>Categoría</th><th class="right">Día</th><th>Estado</th><th class="right">Monto</th></tr>
-                @foreach ($fixed['items'] as $f)
+                @foreach ($fixed['items'] as $i => $f)
                     <tr>
-                        <td>{{ $f['name'] }}</td>
+                        <td><span class="dot" style="background: {{ $fixedSlices[$i]['color'] }};"></span>{{ $f['name'] }}</td>
                         <td class="muted">{{ $f['category'] }}</td>
                         <td class="right">{{ (int) substr($f['date'], 8, 2) }}</td>
                         <td class="{{ $f['isPaid'] ? 'income' : 'muted' }}">{{ $f['isPaid'] ? 'Pagado' : 'Impago' }}</td>
@@ -107,23 +114,32 @@
                     </tr>
                 @endforeach
             </table>
+            </td>
+            </tr></table>
         @else
             <p class="muted">Sin gastos fijos este mes.</p>
         @endif
     </div>
 
     @php
-        $breakdowns = [['Gastos por categoría', $expenseByCategory, 'Sin gastos este mes.']];
+        // [título, filas, vacío, con torta]: las tortas son las de Gráficos (gastos).
+        $breakdowns = [['Gastos por categoría', $expenseByCategory, 'Sin gastos este mes.', true]];
         if ($hasSupercategories) {
-            $breakdowns[] = ['A vuelo de pájaro (por supercategoría)', $bySupercategory, 'Sin gastos este mes.'];
+            $breakdowns[] = ['A vuelo de pájaro (por supercategoría)', $bySupercategory, 'Sin gastos este mes.', true];
         }
-        $breakdowns[] = ['Ingresos por categoría', $incomeByCategory, 'Sin ingresos este mes.'];
+        $breakdowns[] = ['Ingresos por categoría', $incomeByCategory, 'Sin ingresos este mes.', false];
     @endphp
 
-    @foreach ($breakdowns as [$title, $rows, $empty])
-        <div class="section">
+    @foreach ($breakdowns as [$title, $rows, $empty, $withDonut])
+        {{-- Una lista larga de categorías no entra en una hoja: sin page-break-inside. --}}
+        <div class="section" @if ($withDonut) style="page-break-inside: auto;" @endif>
             <h2>{{ $title }}</h2>
             @if (count($rows))
+                @if ($withDonut)
+                    <table><tr>
+                    <td class="donut"><img src="{{ \App\Support\DonutSvg::dataUri($rows) }}" width="120" height="120"></td>
+                    <td style="vertical-align: top;">
+                @endif
                 <table>
                     @foreach ($rows as $c)
                         <tr>
@@ -134,6 +150,10 @@
                         </tr>
                     @endforeach
                 </table>
+                @if ($withDonut)
+                    </td>
+                    </tr></table>
+                @endif
             @else
                 <p class="muted">{{ $empty }}</p>
             @endif

@@ -126,9 +126,7 @@ class FixedInReportsTest extends TestCase
                 ->component('Reports/Index')
                 ->where('fixed.total', 6000)
                 ->where('fixed.pending', 1000)
-                ->has('fixed.items', 2)
-                ->where('hasSupercategories', false)
-                ->where('bySupercategory', []));
+                ->has('fixed.items', 2));
     }
 
     public function test_charts_show_the_period_and_the_year_split(): void
