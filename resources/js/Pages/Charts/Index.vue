@@ -4,6 +4,8 @@ import AppLayout from '@/Layouts/AppLayout.vue';
 import Chart from 'primevue/chart';
 import { Head, Link, router } from '@inertiajs/vue3';
 import { formatMoney } from '@/money';
+import DoughnutChart from '@/Components/DoughnutChart.vue';
+import { FIXED, VARIABLE, fixedColor, fixedSlices } from '@/chartColors';
 import { IconChevronLeft, IconChevronRight, IconFileDownload, IconRepeat } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -45,19 +47,6 @@ const withPct = computed(() => addPct(props.byCategory));
 const superWithPct = computed(() => addPct(props.bySupercategory));
 
 // ---- Datos de los gráficos ----
-const toDoughnut = (slices) => ({
-    labels: slices.map((c) => c.name),
-    datasets: [
-        {
-            data: slices.map((c) => c.total),
-            backgroundColor: slices.map((c) => c.color),
-            borderWidth: 0,
-        },
-    ],
-});
-const doughnutData = computed(() => toDoughnut(props.byCategory));
-const superDoughnutData = computed(() => toDoughnut(props.bySupercategory));
-
 const balance = computed(() => props.totals.income - props.totals.expense);
 
 // Barras horizontales: total del período, ingresos contra gastos.
@@ -119,13 +108,11 @@ const yearlyData = computed(() => ({
         },
     ],
 }));
+
 const sum = (values) => values.reduce((s, v) => s + (v ?? 0), 0);
 const yearlyTotal = computed(() => sum(props.yearly.current));
 
 // ---- Gastos fijos ----
-const FIXED = '#8b5cf6';
-const VARIABLE = '#f43f5e';
-
 // Ancho del tramo de fijos en la barra fijos | variables del período.
 const fixedShare = computed(() => {
     const all = props.fixed.total + props.fixed.variable;
@@ -136,29 +123,7 @@ const fixedDetail = (f) =>
     props.range === 'year'
         ? `${f.category} · ${f.count} ${f.count === 1 ? 'mes' : 'meses'}`
         : `${f.category} · día ${Number(f.date.slice(8, 10))}`;
-// Torta de los fijos solos. Cada fijo lleva un color "al azar" que sale de su id
-// (ángulo de oro sobre el círculo de tonos): distintos entre sí, pero siempre el
-// mismo para el mismo fijo, así no cambia de color cada vez que se abre la página.
-const fixedColor = (id) => `hsl(${Math.round((id * 137.508) % 360)}, 68%, 55%)`;
 const fixedPct = (f) => (props.fixed.total ? Math.round((f.total / props.fixed.total) * 1000) / 10 : 0);
-const fixedDoughnutData = computed(() => ({
-    labels: props.fixed.items.map((f) => f.name),
-    datasets: [
-        {
-            data: props.fixed.items.map((f) => f.total),
-            backgroundColor: props.fixed.items.map((f) => fixedColor(f.id)),
-            borderWidth: 0,
-        },
-    ],
-}));
-const fixedDoughnutOptions = {
-    maintainAspectRatio: false,
-    cutout: '62%',
-    plugins: {
-        legend: { display: false },
-        tooltip: { callbacks: { label: (ctx) => `${ctx.label}: ${money(ctx.parsed)}` } },
-    },
-};
 const fixedStatus = (f) => (f.isPaid ? 'Pagado' : props.range === 'year' ? `Falta ${money(f.pending)}` : 'Impago');
 
 // Barras apiladas: cuánto de lo gastado cada mes del año fue fijo. El tramo de
@@ -213,11 +178,6 @@ const grid = 'rgba(148,163,184,0.15)';
 const baseOptions = {
     maintainAspectRatio: false,
     plugins: { legend: { labels: { color: tick } } },
-};
-const doughnutOptions = {
-    maintainAspectRatio: false,
-    cutout: '62%',
-    plugins: { legend: { display: false } },
 };
 const axisOptions = {
     ...baseOptions,
@@ -322,9 +282,7 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                 </div>
 
                 <div v-if="hasExpenses" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                    <div class="relative h-56">
-                        <Chart type="doughnut" :data="doughnutData" :options="doughnutOptions" class="h-56" />
-                    </div>
+                    <DoughnutChart :slices="byCategory" :symbol="currencySymbol" />
                     <div class="space-y-2 max-h-56 overflow-y-auto">
                         <div v-for="c in withPct" :key="c.name" class="flex items-center gap-2 text-sm">
                             <span class="h-3 w-3 rounded-full shrink-0" :style="{ backgroundColor: c.color }"></span>
@@ -352,9 +310,7 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
                     <Link href="/supercategories" class="inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast">Crear supercategorías</Link>
                 </div>
                 <div v-else-if="hasExpenses" class="grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
-                    <div class="relative h-56">
-                        <Chart type="doughnut" :data="superDoughnutData" :options="doughnutOptions" class="h-56" />
-                    </div>
+                    <DoughnutChart :slices="bySupercategory" :symbol="currencySymbol" />
                     <div class="space-y-2 max-h-56 overflow-y-auto">
                         <div v-for="c in superWithPct" :key="c.name" class="flex items-center gap-2 text-sm">
                             <span class="h-3 w-3 rounded-full shrink-0" :style="{ backgroundColor: c.color }"></span>
@@ -389,9 +345,7 @@ const pdfUrl = computed(() => route('reports.pdf', { month: props.period.date?.s
 
                     <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4 items-center">
                     <!-- Torta: solo los fijos, cada uno con su color -->
-                    <div class="relative h-56">
-                        <Chart type="doughnut" :data="fixedDoughnutData" :options="fixedDoughnutOptions" class="h-56" />
-                    </div>
+                    <DoughnutChart :slices="fixedSlices(fixed.items)" :symbol="currencySymbol" />
                     <ul class="max-h-72 overflow-y-auto divide-y divide-surface-200 dark:divide-surface-800">
                         <li v-for="f in fixed.items" :key="f.id" class="flex items-center gap-3 py-2">
                             <IconRepeat

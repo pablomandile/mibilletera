@@ -1,6 +1,8 @@
 <script setup>
 import AppLayout from '@/Layouts/AppLayout.vue';
-import { Head, router } from '@inertiajs/vue3';
+import { Head, Link, router } from '@inertiajs/vue3';
+import DoughnutChart from '@/Components/DoughnutChart.vue';
+import { fixedColor, fixedSlices } from '@/chartColors';
 import { IconChevronLeft, IconChevronRight, IconTrendingUp, IconTrendingDown, IconFileDownload, IconRepeat } from '@tabler/icons-vue';
 import { computed } from 'vue';
 import { formatMoney, formatMoneyWrappable } from '@/money';
@@ -11,6 +13,8 @@ const props = defineProps({
     fixed: { type: Object, default: () => ({ total: 0, variable: 0, paid: 0, pending: 0, pct: 0, items: [], prevTotal: 0, delta: null }) },
     expenseByCategory: { type: Array, default: () => [] },
     incomeByCategory: { type: Array, default: () => [] },
+    bySupercategory: { type: Array, default: () => [] },
+    hasSupercategories: { type: Boolean, default: false },
     baseSymbol: { type: String, default: '$' },
 });
 
@@ -31,6 +35,7 @@ const fixedShare = computed(() => {
     return all > 0 ? (props.fixed.total / all) * 100 : 0;
 });
 const day = (date) => Number(date.slice(8, 10));
+const fixedPct = (f) => (props.fixed.total ? Math.round((f.total / props.fixed.total) * 1000) / 10 : 0);
 </script>
 
 <template>
@@ -113,6 +118,11 @@ const day = (date) => Number(date.slice(8, 10));
                         </div>
                     </div>
 
+                    <!-- Torta: solo los fijos, cada uno con su color -->
+                    <div class="mt-4">
+                        <DoughnutChart :slices="fixedSlices(fixed.items)" :symbol="baseSymbol" />
+                    </div>
+
                     <!-- Uno por uno -->
                     <ul class="mt-4 divide-y divide-surface-200 dark:divide-surface-800">
                         <li v-for="f in fixed.items" :key="f.id" class="flex items-center gap-3 py-2.5">
@@ -123,7 +133,10 @@ const day = (date) => Number(date.slice(8, 10));
                                 :aria-label="f.isPaid ? 'Pagado' : 'Impago'"
                             />
                             <div class="min-w-0 flex-1">
-                                <p class="text-sm font-medium break-words hyphens-auto">{{ f.name }}</p>
+                                <p class="text-sm font-medium break-words hyphens-auto">
+                                    <span class="inline-block h-2.5 w-2.5 rounded-full mr-1.5 align-[1px]" :style="{ backgroundColor: fixedColor(f.id) }"></span>{{ f.name }}
+                                    <span class="text-xs font-normal text-surface-500">{{ fixedPct(f) }}%</span>
+                                </p>
                                 <p class="text-xs text-surface-500 break-words hyphens-auto">
                                     {{ f.category }} · día {{ day(f.date) }}<template v-if="!f.active"> · ya no se repite</template>
                                 </p>
@@ -147,6 +160,7 @@ const day = (date) => Number(date.slice(8, 10));
                     <IconTrendingDown :size="18" class="text-rose-500" />
                     <h2 class="font-semibold">Gastos por categoría</h2>
                 </div>
+                <DoughnutChart v-if="expenseByCategory.length" :slices="expenseByCategory" :symbol="baseSymbol" class="mb-4" />
                 <div v-if="expenseByCategory.length" class="space-y-3">
                     <div v-for="c in expenseByCategory" :key="c.name">
                         <div class="flex items-center justify-between text-sm mb-1">
@@ -158,6 +172,36 @@ const day = (date) => Number(date.slice(8, 10));
                         </div>
                     </div>
                 </div>
+                <p v-else class="text-center text-surface-500 py-6">Sin gastos este mes.</p>
+            </div>
+
+            <!-- A vuelo de pájaro: gastos por supercategoría -->
+            <div class="rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-4">
+                <div class="flex items-center justify-between gap-2 mb-3">
+                    <h2 class="font-semibold">A vuelo de pájaro</h2>
+                    <Link v-if="hasSupercategories" href="/supercategories" class="text-xs font-medium text-primary">Editar grupos</Link>
+                </div>
+                <div v-if="!hasSupercategories" class="py-6 text-center space-y-3">
+                    <p class="text-surface-500">
+                        Agrupá tus categorías en supercategorías (por ejemplo, Comida = Supermercado + Verdura + Bebidas)
+                        para ver tus gastos de un vistazo.
+                    </p>
+                    <Link href="/supercategories" class="inline-block rounded-xl bg-primary px-4 py-2 text-sm font-semibold text-primary-contrast">Crear supercategorías</Link>
+                </div>
+                <template v-else-if="bySupercategory.length">
+                    <DoughnutChart :slices="bySupercategory" :symbol="baseSymbol" class="mb-4" />
+                    <div class="space-y-3">
+                        <div v-for="c in bySupercategory" :key="c.name">
+                            <div class="flex items-center justify-between text-sm mb-1">
+                                <span class="flex items-center gap-2"><span class="h-3 w-3 rounded-full" :style="{ backgroundColor: c.color }"></span>{{ c.name }}</span>
+                                <span class="text-surface-500">{{ c.pct }}% · <span class="font-medium text-surface-900 dark:text-surface-100">{{ money(c.total) }}</span></span>
+                            </div>
+                            <div class="h-2 rounded-full bg-surface-200 dark:bg-surface-800 overflow-hidden">
+                                <div class="h-full rounded-full" :style="{ width: c.pct + '%', backgroundColor: c.color }"></div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
                 <p v-else class="text-center text-surface-500 py-6">Sin gastos este mes.</p>
             </div>
 
