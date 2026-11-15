@@ -32,6 +32,8 @@ class User extends Authenticatable
         'google_id',
         'avatar',
         'default_currency',
+        'dollar_type_expense',
+        'dollar_type_income',
         'locale',
         'timezone',
         'month_start_day',

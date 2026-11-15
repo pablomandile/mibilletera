@@ -67,13 +67,96 @@ const baseSymbol = computed(() => symbolOf(props.defaultCurrency));
 const filteredCategories = computed(() => categoryOptions.value.filter((c) => c.type === type.value));
 const selectedAccount = computed(() => accountOptions.value.find((a) => a.id === selectedAccountId.value) ?? null);
 const toAccount = computed(() => accountOptions.value.find((a) => a.id === toAccountId.value) ?? null);
-const currencySymbol = computed(() => symbolOf(selectedAccount.value?.currency_code ?? props.defaultCurrency));
+// ---- Moneda del gasto/ingreso ----
+// En una cuenta en la moneda base se elige pesos o dólares (pesos por defecto: una
+// compra en dólares con la tarjeta). En una cuenta en otra moneda, es la de la cuenta.
+const accountInBase = computed(() => !selectedAccount.value || selectedAccount.value.currency_code === props.defaultCurrency);
+const currencyCode = ref(
+    tx?.type !== 'transfer' && tx?.currency_code
+        ? tx.currency_code
+        : (selectedAccount.value && !accountInBase.value ? selectedAccount.value.currency_code : props.defaultCurrency)
+);
+// Una cuenta en otra moneda impone la suya; al volver de ella a una en la base,
+// vuelve a la base. Entre cuentas en la base se conserva lo elegido.
+watch(selectedAccount, (acc, prev) => {
+    const foreign = (a) => a && a.currency_code !== props.defaultCurrency;
+    if (foreign(acc)) currencyCode.value = acc.currency_code;
+    else if (foreign(prev)) currencyCode.value = props.defaultCurrency;
+});
+const CURRENCY_CHOICES = computed(() => [props.defaultCurrency, ...(props.defaultCurrency === 'USD' ? [] : ['USD'])]);
+const canChooseCurrency = computed(() => type.value !== 'transfer' && accountInBase.value && CURRENCY_CHOICES.value.length > 1);
+
+const currencySymbol = computed(() =>
+    symbolOf(type.value === 'transfer' ? selectedAccount.value?.currency_code ?? props.defaultCurrency : currencyCode.value)
+);
 
 const needsRate = computed(() =>
     type.value !== 'transfer' &&
     selectedAccount.value &&
-    selectedAccount.value.currency_code !== props.defaultCurrency
+    currencyCode.value !== props.defaultCurrency
 );
+
+// ---- Cotización precargada (API de bambudev, vía /cotizacion) ----
+// Gastos: dólar tarjeta; ingresos: dólar blue. Del día del movimiento. Queda
+// editable; sin respuesta (sin conexión, fecha vieja), se carga a mano.
+const rateType = computed(() => (type.value === 'income' ? 'blue' : 'tarjeta'));
+const RATE_NAMES = { tarjeta: 'Dólar tarjeta', blue: 'Dólar blue' };
+const rateInfo = ref(null); // { tipo, fecha, pedida } de la última precarga, o { failed: true }
+const rateLoading = ref(false);
+let rateRequest = 0;
+
+// El valor del campo lo puso la precarga (no lo tecleó la persona).
+const rateAuto = ref(false);
+
+// Sin cotización, ni el 1 por defecto (US$ 1 = $ 1) ni una precarga de otra fecha
+// o de otro dólar sirven: se vacía y el botón de guardar espera a que se cargue a
+// mano. Lo que se tecleó, se respeta.
+function failRate() {
+    rateInfo.value = { failed: true };
+    if (rateAuto.value || Number(exchangeRate.value) === 1) {
+        exchangeRate.value = '';
+        rateAuto.value = false;
+    }
+}
+
+async function loadRate() {
+    if (!needsRate.value || props.defaultCurrency !== 'ARS' || currencyCode.value !== 'USD') {
+        rateInfo.value = null;
+        return;
+    }
+    const id = ++rateRequest;
+    const tipo = rateType.value;
+    const fecha = transactionDate.value;
+    rateLoading.value = true;
+    try {
+        const res = await fetch(route('cotizacion', { tipo, fecha }), { headers: { Accept: 'application/json' } });
+        const data = res.ok ? await res.json() : null;
+        if (id !== rateRequest) return; // llegó tarde: ya se pidió otra
+        if (data?.venta) {
+            exchangeRate.value = data.venta;
+            rateAuto.value = true;
+            rateInfo.value = { tipo, fecha: data.fecha, pedida: fecha };
+        } else {
+            failRate();
+        }
+    } catch {
+        if (id === rateRequest) failRate();
+    } finally {
+        if (id === rateRequest) rateLoading.value = false;
+    }
+}
+// Al cambiar la moneda, el tipo o la fecha se vuelve a pedir (y pisa lo tecleado).
+// Al abrir una edición no: queda la cotización guardada.
+watch([currencyCode, rateType, transactionDate], loadRate, { immediate: !tx });
+
+const rateHint = computed(() => {
+    const info = rateInfo.value;
+    if (rateLoading.value) return 'Buscando la cotización…';
+    if (!info) return '';
+    if (info.failed) return 'Sin cotización del día: cargala a mano.';
+    const [y, m, d] = info.fecha.split('-');
+    return `${RATE_NAMES[info.tipo]} del ${d}/${m}/${y}${info.fecha !== info.pedida ? ' (último disponible)' : ''}`;
+});
 const crossCurrency = computed(() =>
     type.value === 'transfer' &&
     selectedAccount.value && toAccount.value &&
@@ -209,6 +292,7 @@ const form = useForm({
     account_id: null,
     to_account_id: null,
     category_id: null,
+    currency_code: null,
     exchange_rate: 1,
     transfer_amount: null,
     note: '',
@@ -231,10 +315,12 @@ function save() {
         form.to_account_id = toAccountId.value;
         form.transfer_amount = crossCurrency.value ? Number(transferAmount.value) : amount.value;
         form.category_id = null;
+        form.currency_code = null;
         form.exchange_rate = 1;
         form.photo = null;
     } else {
         form.category_id = selectedCategoryId.value;
+        form.currency_code = currencyCode.value;
         form.exchange_rate = needsRate.value ? Number(exchangeRate.value) : 1;
         form.to_account_id = null;
         form.transfer_amount = null;
@@ -287,7 +373,7 @@ function rowView(data) {
         is_paid: props.transaction?.is_paid ?? true,
         installment_number: n ? 1 : props.transaction?.installment_number ?? null,
         installments_total: n ?? props.transaction?.installments_total ?? null,
-        currency_code: account?.currency_code ?? props.defaultCurrency,
+        currency_code: isTransfer ? account?.currency_code ?? props.defaultCurrency : data.currency_code ?? props.defaultCurrency,
         note: data.note || null,
         date: data.transaction_date,
         category: category
@@ -313,6 +399,7 @@ function serverState() {
     return {
         type: t.type,
         amount: Number(t.amount),
+        currency_code: t.currency_code ?? null,
         exchange_rate: Number(t.exchange_rate ?? 1),
         date: t.transaction_date,
         account_id: t.account_id,
@@ -432,11 +519,33 @@ const tabClass = (t, activeColor) =>
                     </div>
                 </div>
 
-                <!-- Tipo de cambio (cuenta en moneda no-base) -->
-                <div v-if="needsRate" class="flex items-center gap-2 px-4 pt-2 text-sm">
-                    <span class="text-surface-500">Cotización: 1 {{ selectedAccount.currency_code }} =</span>
-                    <input v-model="exchangeRate" type="number" step="0.0001" class="w-28 rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1 text-sm" />
-                    <span class="text-surface-500">{{ defaultCurrency }}</span>
+                <!-- Moneda del gasto/ingreso (solo en cuentas en la moneda base) -->
+                <div v-if="canChooseCurrency" class="flex items-center gap-2 px-4 pt-2 text-sm">
+                    <span class="text-surface-500">Moneda</span>
+                    <div class="grid grid-cols-2 rounded-lg bg-surface-200/60 dark:bg-surface-800 p-0.5" role="radiogroup" aria-label="Moneda">
+                        <button
+                            v-for="code in CURRENCY_CHOICES"
+                            :key="code"
+                            type="button"
+                            role="radio"
+                            :aria-checked="currencyCode === code"
+                            class="px-3 py-1 rounded-md text-xs font-semibold transition"
+                            :class="currencyCode === code ? 'bg-white dark:bg-surface-900 text-primary shadow' : 'text-surface-500'"
+                            @click="currencyCode = code"
+                        >
+                            {{ symbolOf(code) }} {{ code }}
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Tipo de cambio (movimiento en una moneda que no es la base) -->
+                <div v-if="needsRate" class="px-4 pt-2 text-sm">
+                    <div class="flex items-center gap-2">
+                        <span class="text-surface-500">Cotización: 1 {{ currencyCode }} =</span>
+                        <input v-model="exchangeRate" type="number" step="0.0001" min="0" @input="rateAuto = false" class="w-28 rounded-lg border-surface-300 dark:border-surface-700 bg-surface-50 dark:bg-surface-800 py-1 text-sm" />
+                        <span class="text-surface-500">{{ defaultCurrency }}</span>
+                    </div>
+                    <p v-if="rateHint" class="mt-0.5 text-xs" :class="rateInfo?.failed ? 'text-amber-600 dark:text-amber-400' : 'text-surface-400'">{{ rateHint }}</p>
                 </div>
 
                 <!-- Monto recibido (transferencia entre monedas) -->
@@ -468,6 +577,7 @@ const tabClass = (t, activeColor) =>
                 </div>
 
                 <p v-if="form.errors.installments" class="px-4 pt-1 text-xs text-rose-500">{{ form.errors.installments }}</p>
+                <p v-if="form.errors.exchange_rate" class="px-4 pt-1 text-xs text-rose-500">{{ form.errors.exchange_rate }}</p>
 
                 <!-- Nota + foto + fecha -->
                 <div class="flex items-center gap-2 px-4 py-2">

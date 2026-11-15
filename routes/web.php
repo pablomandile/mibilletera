@@ -6,6 +6,7 @@ use App\Http\Controllers\AdminUserController;
 use App\Http\Controllers\BudgetController;
 use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChartsController;
+use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\Legales\LegalesController;
@@ -93,6 +94,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('/transactions/{transaction}', [TransactionController::class, 'update'])->name('transactions.update');
     Route::patch('/transactions/{transaction}/paid', [TransactionController::class, 'paid'])->name('transactions.paid');
     Route::delete('/transactions/{transaction}', [TransactionController::class, 'destroy'])->name('transactions.destroy');
+    // Cotización del dólar para precargar un movimiento en USD (API de bambudev).
+    Route::get('/cotizacion', CotizacionController::class)->name('cotizacion');
 
     // Cuentas
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');

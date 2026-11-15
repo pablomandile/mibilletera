@@ -16,6 +16,8 @@ use Illuminate\Support\Carbon;
  */
 class RecurringGenerator
 {
+    public function __construct(private DollarRates $rates) {}
+
     public function process(RecurringTransaction $rec, ?Carbon $today = null): int
     {
         $until = self::horizon($rec, $today);
@@ -40,7 +42,7 @@ class RecurringGenerator
                 'type' => $rec->type,
                 'amount' => $rec->amount,
                 'currency_code' => $rec->currency_code,
-                'exchange_rate' => $rec->exchange_rate,
+                'exchange_rate' => $this->rateFor($rec, $next),
                 'note' => $rec->note,
                 'transaction_date' => $next->copy(),
                 // Una repetición de gasto fijo arranca impaga hasta que se marque.
@@ -62,6 +64,23 @@ class RecurringGenerator
         $rec->save();
 
         return $count;
+    }
+
+    /**
+     * La cotización de una repetición en dólares (con base en pesos): la del dólar
+     * de su fecha, que queda en la serie como la última conocida. Si la API no la
+     * tiene (fecha vieja, sin conexión), la última conocida de la serie.
+     */
+    private function rateFor(RecurringTransaction $rec, Carbon $date): float
+    {
+        if ($rec->currency_code === 'USD' && ($rec->user?->default_currency ?: 'ARS') === 'ARS') {
+            $rate = $this->rates->rate(DollarRates::typeFor($rec->type, $rec->user), $date);
+            if ($rate) {
+                $rec->exchange_rate = $rate['venta'];
+            }
+        }
+
+        return (float) $rec->exchange_rate;
     }
 
     public static function horizon(RecurringTransaction $rec, ?Carbon $today = null): Carbon

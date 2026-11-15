@@ -75,12 +75,18 @@ export function overlayDashboard({ transactions, totals, dayTotals, period, filt
     return { transactions: list, totals: nextTotals, dayTotals: nextDays };
 }
 
-// Cuánto mueve un movimiento el saldo de cada cuenta.
-function moveBalances(t, sign, add) {
+// Cuánto mueve un movimiento el saldo de cada cuenta. Un gasto o ingreso en otra
+// moneda que la cuenta (US$ con una tarjeta en pesos) cuenta convertido, como en
+// Account::currentBalance().
+function moveBalances(t, sign, add, currencyOf) {
     if (!t) return;
     const amount = Number(t.amount);
-    if (t.type === 'expense') add(t.account_id, -sign * amount);
-    else if (t.type === 'income') add(t.account_id, sign * amount);
+    const accountCurrency = currencyOf(t.account_id);
+    const converted = t.currency_code && accountCurrency && t.currency_code !== accountCurrency
+        ? amount * Number(t.exchange_rate ?? 1)
+        : amount;
+    if (t.type === 'expense') add(t.account_id, -sign * converted);
+    else if (t.type === 'income') add(t.account_id, sign * converted);
     else if (t.type === 'transfer') {
         add(t.account_id, -sign * amount);
         add(t.to_account_id, sign * Number(t.transfer_amount ?? amount));
@@ -96,12 +102,14 @@ export function overlayAccounts(accounts) {
     const add = (id, value) => {
         if (id != null) deltas[String(id)] = (deltas[String(id)] ?? 0) + value;
     };
+    const merged = applyList(accounts, 'account');
+    const currencyOf = (id) => merged.find((a) => String(a.id) === String(id))?.currency_code ?? null;
     for (const op of opsOf('transaction')) {
-        if (op.action !== 'create') moveBalances(op.before, -1, add);
-        if (op.action !== 'delete') moveBalances(op.view, +1, add);
+        if (op.action !== 'create') moveBalances(op.before, -1, add, currencyOf);
+        if (op.action !== 'delete') moveBalances(op.view, +1, add, currencyOf);
     }
 
-    return applyList(accounts, 'account').map((a) => {
+    return merged.map((a) => {
         const before = original.get(String(a.id));
         // Alta: arranca en el saldo inicial. Edición: el saldo se corre lo mismo
         // que el saldo inicial.

@@ -6,6 +6,7 @@ use App\Models\Account;
 use App\Models\RecurringTransaction;
 use App\Models\Transaction;
 use App\Models\User;
+use App\Services\DollarRates;
 use App\Services\RecurringGenerator;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -22,7 +23,7 @@ use Illuminate\Validation\ValidationException;
  */
 class TransactionActions
 {
-    public function __construct(private RecurringGenerator $generator) {}
+    public function __construct(private RecurringGenerator $generator, private DollarRates $rates) {}
 
     public function create(User $user, array $input, ?UploadedFile $photo = null): Transaction
     {
@@ -36,7 +37,7 @@ class TransactionActions
         $data = $this->validateExpenseIncome(['photo' => $photo] + $input, $user);
         $account = Account::where('user_id', $user->id)->findOrFail($data['account_id']);
 
-        $attributes = $this->expenseIncomeAttributes($data, $account);
+        $attributes = $this->expenseIncomeAttributes($data, $account, $user);
         $installments = (int) ($data['installments'] ?? 1);
         $fixed = (bool) ($data['is_fixed'] ?? false);
         $installmentAmount = null;
@@ -85,7 +86,7 @@ class TransactionActions
         $data = $this->validateExpenseIncome(['photo' => $photo] + $input, $user);
         $account = Account::where('user_id', $user->id)->findOrFail($data['account_id']);
 
-        $attributes = $this->expenseIncomeAttributes($data, $account);
+        $attributes = $this->expenseIncomeAttributes($data, $account, $user, $transaction);
 
         if ($photo) {
             $this->deletePhoto($transaction);
@@ -289,6 +290,7 @@ class TransactionActions
             'amount' => ['required', 'numeric', 'gt:0'],
             'account_id' => ['required', Rule::exists('accounts', 'id')->where('user_id', $user->id)],
             'category_id' => ['required', Rule::exists('categories', 'id')->where('user_id', $user->id)],
+            'currency_code' => ['nullable', Rule::exists('currencies', 'code')],
             'exchange_rate' => ['nullable', 'numeric', 'gt:0'],
             'note' => ['nullable', 'string', 'max:255'],
             'transaction_date' => ['required', 'date'],
@@ -321,21 +323,71 @@ class TransactionActions
     /**
      * Atributos comunes de un gasto/ingreso (sin la foto).
      */
-    private function expenseIncomeAttributes(array $data, Account $account): array
+    private function expenseIncomeAttributes(array $data, Account $account, User $user, ?Transaction $existing = null): array
     {
+        $currency = $this->resolveCurrency($data, $account, $user, $existing);
+
         return [
             'account_id' => $account->id,
             'category_id' => $data['category_id'],
             'type' => $data['type'],
             'amount' => $data['amount'],
-            'currency_code' => $account->currency_code,
-            'exchange_rate' => $data['exchange_rate'] ?? 1,
+            'currency_code' => $currency,
+            'exchange_rate' => $this->resolveRate($data, $currency, $user, $existing),
             'note' => $data['note'] ?? null,
             'transaction_date' => $data['transaction_date'],
             'to_account_id' => null,
             'transfer_amount' => null,
             'transfer_currency' => null,
         ];
+    }
+
+    /**
+     * La moneda del movimiento. En una cuenta en la moneda base se elige (pesos o
+     * dólares, p. ej. una compra en dólares con la tarjeta); en una cuenta en otra
+     * moneda, es la de la cuenta.
+     */
+    private function resolveCurrency(array $data, Account $account, User $user, ?Transaction $existing): string
+    {
+        $base = $user->default_currency ?: 'ARS';
+
+        if ($account->currency_code !== $base) {
+            return $account->currency_code;
+        }
+
+        // Un cliente viejo (o una operación encolada antes de esto) no la manda:
+        // al editar se conserva la que tenía; al cargar, la base.
+        return $data['currency_code'] ?? $existing?->currency_code ?? $base;
+    }
+
+    /**
+     * Cuánto vale 1 de la moneda del movimiento en la base. Si no viene (cliente
+     * viejo, sincronización sin conexión), la del dólar del día desde bambudev;
+     * al editar, la que ya tenía. Sin ninguna, hay que cargarla a mano.
+     */
+    private function resolveRate(array $data, string $currency, User $user, ?Transaction $existing): float
+    {
+        $base = $user->default_currency ?: 'ARS';
+
+        if ($currency === $base) {
+            return 1.0;
+        }
+        if (! empty($data['exchange_rate'])) {
+            return (float) $data['exchange_rate'];
+        }
+        if ($existing && $existing->currency_code === $currency) {
+            return (float) $existing->exchange_rate;
+        }
+        if ($base === 'ARS' && $currency === 'USD') {
+            $rate = $this->rates->rate(DollarRates::typeFor($data['type'], $user), $data['transaction_date']);
+            if ($rate) {
+                return $rate['venta'];
+            }
+        }
+
+        throw ValidationException::withMessages([
+            'exchange_rate' => 'Falta la cotización: cargá cuánto vale 1 '.$currency.' en '.$base.'.',
+        ]);
     }
 
     private function transferAttributes(array $data, Account $from, Account $to): array

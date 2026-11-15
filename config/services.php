@@ -35,6 +35,13 @@ return [
         ],
     ],
 
+    // Cotización del dólar por tipo y fecha (API de bambudev). La clave es de
+    // MiBilletera y solo la usa el servidor: nunca viaja al navegador.
+    'bambudev' => [
+        'url' => env('BAMBUDEV_API_URL', 'https://bambudev.com.ar/api/v1'),
+        'key' => env('BAMBUDEV_API_KEY'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

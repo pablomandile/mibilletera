@@ -38,11 +38,18 @@ class Account extends Model
     /**
      * Saldo actual en la moneda de la cuenta:
      * saldo inicial + ingresos - gastos - transferencias salientes + transferencias entrantes.
+     *
+     * Un gasto o ingreso en otra moneda (una compra en dólares con una tarjeta en
+     * pesos) se cuenta convertido con su cotización: US$ 10 a $ 2.041 son $ 20.410.
      */
     public function currentBalance(): float
     {
-        $income = (float) $this->transactions()->where('type', 'income')->sum('amount');
-        $expense = (float) $this->transactions()->where('type', 'expense')->sum('amount');
+        $sum = fn (string $type) => (float) $this->transactions()->where('type', $type)
+            ->selectRaw('SUM(CASE WHEN currency_code = ? THEN amount ELSE amount * exchange_rate END) as total', [$this->currency_code])
+            ->value('total');
+
+        $income = $sum('income');
+        $expense = $sum('expense');
         $transferOut = (float) $this->transactions()->where('type', 'transfer')->sum('amount');
         $transferIn = (float) Transaction::where('to_account_id', $this->id)
             ->where('type', 'transfer')

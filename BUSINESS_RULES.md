@@ -43,7 +43,8 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - Una transacción es de tipo **gasto**, **ingreso** o **transferencia**.
 - Gasto e ingreso requieren: **monto > 0**, una **cuenta** y una **categoría** (ambas del usuario).
 - El **monto** se ingresa con una calculadora que admite operaciones (`+ − × ÷`) evaluadas **de izquierda a derecha**.
-- La transacción hereda la **moneda de la cuenta**; se puede adjuntar **nota**, **foto** (imagen ≤ 5 MB) y **fecha** (por defecto hoy).
+- **Moneda**: en una cuenta en la moneda base se elige **pesos o dólares** (pesos ya elegido; p. ej. una compra en dólares con la tarjeta). En una cuenta en otra moneda (p. ej. «Ahorro en dólares»), el movimiento va en la moneda de la cuenta.
+- Se puede adjuntar **nota**, **foto** (imagen ≤ 5 MB) y **fecha** (por defecto hoy).
 - Solo el dueño puede editar/eliminar sus transacciones.
 - **Gasto fijo** (o ingreso fijo): al cargarlo se tilda «Gasto fijo» y se repite solo **cada mes el mismo día** que el primero (si el mes no tiene ese día, cae el último; al mes siguiente vuelve al día original). La repetición del **mes en curso aparece en cuanto se carga o se edita**, aunque su día todavía no haya llegado (queda con su fecha, y ya cuenta en el saldo y en los totales del mes); el 1° de cada mes se genera la de ese mes. Si se cargó con fecha vieja, las que faltan se generan en el acto.
   - Al **editar** una repetición y **destildar** «Gasto fijo», esa es **la última** (baja del servicio): si la del mes ya estaba adelantada, se borra.
@@ -65,7 +66,10 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 
 - Cada usuario tiene una **moneda base** (`default_currency`, por defecto **ARS**), configurable en Ajustes.
 - Los **totales** de Inicio, Gráficos e Informes se expresan en la moneda base: cada movimiento se convierte con `monto × tipo_de_cambio`.
-- Cuando se carga una transacción en una cuenta **cuya moneda no es la base**, la calculadora pide una **cotización manual** (`1 [moneda] = X [base]`) que se guarda como `exchange_rate`.
+- Cuando un gasto o ingreso está en una moneda **que no es la base**, se guarda su **cotización** (`1 [moneda] = X [base]`) como `exchange_rate`.
+  - Con base en pesos y el movimiento en dólares, se **precarga** desde la API de bambudev (la consulta el servidor, con la clave `BAMBUDEV_API_KEY`): **dólar tarjeta** para gastos y **dólar blue** para ingresos, de la **fecha del movimiento** (si ese día no hubo, la del último día anterior). Queda **editable**.
+  - Sin cotización (sin conexión, error de la API, fecha anterior al 13/11/2026) se carga **a mano**, como siempre. Si el servidor recibe un movimiento en dólares sin cotización (p. ej. sincronizado sin conexión), la busca él; si tampoco hay, lo rechaza pidiéndola.
+- El **saldo de una cuenta** cuenta un gasto o ingreso en otra moneda **convertido**: US$ 10 a $ 2.041 bajan la tarjeta $ 20.410.
 - Cada movimiento se **muestra en su propia moneda** en las listas; solo los agregados se convierten a base.
 - Monedas de referencia disponibles: ARS, USD, EUR, BRL.
 
@@ -82,7 +86,7 @@ Al crearse un usuario, automáticamente se generan (`SeedDefaultUserData` vía `
 - El comando `recurring:run` (diario) genera las transacciones **pendientes hasta hoy** con **catch-up**: si el sistema estuvo inactivo, crea todas las ocurrencias que faltaban.
 - Tras generar, avanza `next_run_date` según la frecuencia; si supera el `end_date`, la recurrente se **desactiva** sola.
 - Se pueden **pausar/reactivar** (`is_active`) y editar/eliminar.
-- Las recurrentes generan transacciones en la moneda de la cuenta con tipo de cambio = 1 (no piden cotización).
+- Las recurrentes generan transacciones en la moneda de la serie. Si es en dólares (con base en pesos), **cada repetición toma la cotización de su fecha** (tarjeta o blue, como al cargar); las que se generan por adelantado, la de hoy. Si la API no responde, repiten la última cotización conocida.
 - Los **gastos fijos** y las **cuotas** (ver §5) son recurrentes mensuales de tipo `fixed` / `installments` que nacen al cargar el gasto. Aparecen en Recurrentes igual que las manuales (se pueden pausar o borrar) y usan un **día ancla** para no correrse en meses cortos. Se generan **hasta fin del mes en curso** (las manuales, hasta hoy). Las cuotas se desactivan solas al generar la última.
 
 ## 10. Recordatorios y notificaciones
