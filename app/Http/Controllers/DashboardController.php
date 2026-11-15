@@ -24,8 +24,9 @@ class DashboardController extends Controller
         $end = $date->copy()->endOfMonth();
 
         // Filtro del listado (los totales siguen siendo los del mes completo).
+        // `unpaid`: solo los gastos fijos que falta pagar (segundo toque en Gastos).
         $filter = $request->query('type');
-        if (! in_array($filter, ['income', 'expense', 'transfer'], true)) {
+        if (! in_array($filter, ['income', 'expense', 'transfer', 'unpaid'], true)) {
             $filter = null;
         }
 
@@ -56,9 +57,13 @@ class DashboardController extends Controller
 
         $symbols = Currency::pluck('symbol', 'code');
 
-        $visible = $filter
-            ? $transactions->where('type', $filter)->values()
-            : $transactions;
+        $visible = match ($filter) {
+            null => $transactions,
+            'unpaid' => $transactions
+                ->filter(fn ($t) => $t->type === 'expense' && $t->inFixedSeries() && ! $t->is_paid)
+                ->values(),
+            default => $transactions->where('type', $filter)->values(),
+        };
 
         return Inertia::render('Dashboard', [
             'transactions' => $visible->map->toListItem(),

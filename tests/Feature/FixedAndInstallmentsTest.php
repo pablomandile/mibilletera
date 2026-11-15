@@ -246,6 +246,30 @@ class FixedAndInstallmentsTest extends TestCase
         $this->assertFalse($november->fresh()->is_paid);
     }
 
+    public function test_the_unpaid_filter_lists_only_fixed_expenses_still_to_pay(): void
+    {
+        $user = $this->fixedOnTheEighth(); // octubre (pago) y noviembre (impago)
+        $this->actingAs($user)->post('/transactions', $this->expense($user, ['note' => 'Súper', 'transaction_date' => '2026-11-02']));
+        $november = $user->transactions()->whereDate('transaction_date', '2026-11-08')->sole();
+
+        $this->actingAs($user)->get('/dashboard?month=2026-11&type=unpaid')
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page
+                ->where('filter', 'unpaid')
+                ->has('transactions', 1)
+                ->where('transactions.0.id', $november->id)
+                // Los totales siguen siendo los del mes completo.
+                ->where('totals.expense', 2000));
+
+        // Pagado, ya no aparece.
+        $this->actingAs($user)->patch("/transactions/{$november->id}/paid", ['is_paid' => true]);
+        $this->actingAs($user)->get('/dashboard?month=2026-11&type=unpaid')
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->has('transactions', 0));
+
+        // El pagado de octubre tampoco.
+        $this->actingAs($user)->get('/dashboard?month=2026-10&type=unpaid')
+            ->assertInertia(fn (\Inertia\Testing\AssertableInertia $page) => $page->has('transactions', 0));
+    }
+
     public function test_editing_the_series_keeps_a_repetition_paid_in_advance(): void
     {
         $user = $this->fixedOnTheEighth();

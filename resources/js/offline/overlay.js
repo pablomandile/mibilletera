@@ -39,7 +39,15 @@ export function applyList(items, entity, { accept = () => true } = {}) {
 
 // ---- Movimientos ----
 
-const baseAmount = (t) => Number(t.amount) * Number(t.exchange_rate ?? 1);
+export const baseAmount = (t) => Number(t.amount) * Number(t.exchange_rate ?? 1);
+
+// El filtro del listado de Inicio, igual que DashboardController: un tipo, o
+// `unpaid` = los gastos fijos que falta pagar.
+const matchesFilter = (t, filter) =>
+    !filter ||
+    (filter === 'unpaid'
+        ? t.type === 'expense' && (t.fixed_series || t.is_fixed) && t.is_paid === false
+        : t.type === filter);
 
 /** Inicio: listado del mes, totales del mes y subtotales de cada día. */
 export function overlayDashboard({ transactions, totals, dayTotals, period, filter }) {
@@ -62,12 +70,16 @@ export function overlayDashboard({ transactions, totals, dayTotals, period, filt
     nextTotals.balance = nextTotals.income - nextTotals.expense;
 
     const list = applyList(transactions, 'transaction', {
-        accept: (t) => inMonth(t) && (!filter || t.type === filter),
+        accept: (t) => inMonth(t) && matchesFilter(t, filter),
     });
     // Pagado / impago marcado sin conexión (no mueve totales ni saldos).
     for (const op of opsOf('payment')) {
         const i = list.findIndex((t) => sameId(t.id, op.id));
         if (i >= 0) list[i] = { ...list[i], is_paid: !!op.data?.is_paid, _pending: true };
+    }
+    // Con el filtro de fijos impagos, el que se acaba de marcar pagado se va.
+    if (filter === 'unpaid') {
+        for (let i = list.length - 1; i >= 0; i--) if (!matchesFilter(list[i], filter)) list.splice(i, 1);
     }
     // Más nuevo primero, como el server; dentro del mismo día, lo pendiente arriba.
     list.sort((a, b) => b.date.localeCompare(a.date) || Number(!!b._pending) - Number(!!a._pending));

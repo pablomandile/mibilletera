@@ -5,7 +5,7 @@ import TransactionRow from '@/Components/TransactionRow.vue';
 import TransactionDetail from '@/Components/TransactionDetail.vue';
 import { Head, router, usePage } from '@inertiajs/vue3';
 import { mutate } from '@/offline/mutate';
-import { overlayDashboard } from '@/offline/overlay';
+import { overlayDashboard, baseAmount } from '@/offline/overlay';
 import { openTransactionEdit } from '@/offline/pages';
 import { IconChevronLeft, IconChevronRight, IconX } from '@tabler/icons-vue';
 import { formatMoney, formatMoneyWrappable } from '@/money';
@@ -15,7 +15,7 @@ const props = defineProps({
     period: { type: Object, required: true },
     totals: { type: Object, required: true },
     dayTotals: { type: Object, default: () => ({}) }, // { 'Y-m-d': { income, expense } }
-    filter: { type: String, default: null }, // income | expense | transfer | null
+    filter: { type: String, default: null }, // income | expense | transfer | unpaid | null
     baseSymbol: { type: String, default: '$' },
     symbols: { type: Object, default: () => ({}) },
 });
@@ -30,14 +30,26 @@ const visit = (params) => router.get(route('dashboard'), params, { preserveScrol
 
 const goMonth = (m) => visit({ month: m, ...(props.filter ? { type: props.filter } : {}) });
 
-// Tocar la tarjeta de Ingresos/Gastos filtra el listado; volver a tocarla lo limpia.
-const toggleFilter = (type) =>
-    visit({ month: props.period.month, ...(props.filter === type ? {} : { type }) });
+// Tocar la tarjeta de Ingresos filtra el listado; volver a tocarla lo limpia.
+// La de Gastos tiene tres pasos: solo gastos → solo gastos fijos impagos → todo.
+const NEXT_FILTER = { income: { income: null }, expense: { expense: 'unpaid', unpaid: null } };
+const toggleFilter = (card) => {
+    const next = props.filter in NEXT_FILTER[card] ? NEXT_FILTER[card][props.filter] : card;
+    visit({ month: props.period.month, ...(next ? { type: next } : {}) });
+};
 
 const clearFilter = () => visit({ month: props.period.month });
 
-const FILTER_LABELS = { income: 'ingresos', expense: 'gastos', transfer: 'transferencias' };
+const FILTER_LABELS = { income: 'ingresos', expense: 'gastos', transfer: 'transferencias', unpaid: 'gastos fijos impagos' };
 const filterLabel = computed(() => FILTER_LABELS[props.filter] ?? '');
+
+// En el paso de fijos impagos, la tarjeta muestra cuánto falta pagar (la suma de lo listado).
+const unpaidTotal = computed(() => shown.value.transactions.reduce((s, t) => s + baseAmount(t), 0));
+const expenseCard = computed(() =>
+    props.filter === 'unpaid'
+        ? { label: 'Impagos', value: unpaidTotal.value, hint: 'Gastos fijos impagos. Tocá para ver todos los movimientos' }
+        : { label: 'Gastos', value: shown.value.totals.expense, hint: props.filter === 'expense' ? 'Tocá para ver solo los gastos fijos impagos' : 'Tocá para ver solo los gastos' }
+);
 
 const MONTHS_SHORT = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
 const WEEKDAYS = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
@@ -132,12 +144,16 @@ const editTransaction = (row) => openTransactionEdit(row, page.version);
                 <button
                     type="button"
                     class="piggy-single text-left min-w-0 rounded-2xl bg-white dark:bg-surface-900 border p-3 md:p-4 transition"
-                    :class="filter === 'expense' ? 'border-rose-500 ring-1 ring-rose-500' : 'border-surface-200 dark:border-surface-800 hover:border-rose-500/50'"
-                    :aria-pressed="filter === 'expense'"
+                    :class="filter === 'unpaid'
+                        ? 'border-amber-500 ring-1 ring-amber-500'
+                        : filter === 'expense' ? 'border-rose-500 ring-1 ring-rose-500' : 'border-surface-200 dark:border-surface-800 hover:border-rose-500/50'"
+                    :aria-pressed="filter === 'expense' || filter === 'unpaid'"
+                    :title="expenseCard.hint"
+                    :aria-label="`${expenseCard.label}: ${moneyBase(expenseCard.value)}. ${expenseCard.hint}`"
                     @click="toggleFilter('expense')"
                 >
-                    <p class="text-xs text-surface-500">Gastos</p>
-                    <p class="mt-1 text-sm md:text-lg font-semibold text-rose-500 break-words hyphens-auto">{{ moneyTotal(shown.totals.expense) }}</p>
+                    <p class="text-xs text-surface-500 truncate">{{ expenseCard.label }}</p>
+                    <p class="mt-1 text-sm md:text-lg font-semibold break-words hyphens-auto" :class="filter === 'unpaid' ? 'text-amber-600 dark:text-amber-400' : 'text-rose-500'">{{ moneyTotal(expenseCard.value) }}</p>
                 </button>
                 <div class="piggy-single min-w-0 rounded-2xl bg-white dark:bg-surface-900 border border-surface-200 dark:border-surface-800 p-3 md:p-4">
                     <p class="text-xs text-surface-500">Balance</p>
