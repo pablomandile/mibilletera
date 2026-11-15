@@ -8,6 +8,7 @@ use App\Http\Controllers\CategoryController;
 use App\Http\Controllers\ChartsController;
 use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\DollarSettingsController;
 use App\Http\Controllers\ExportController;
 use App\Http\Controllers\Legales\LegalesController;
 use App\Http\Controllers\MonthlyPdfController;
@@ -79,6 +80,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
     Route::patch('/preferences', [PreferencesController::class, 'update'])->name('preferences.update');
 
+    // Ajustes → Cotización del dólar (el dólar por defecto de cada usuario).
+    Route::get('/settings/dollar', [DollarSettingsController::class, 'index'])->name('settings.dollar');
+    Route::patch('/settings/dollar', [DollarSettingsController::class, 'updatePreferences'])->name('settings.dollar.update');
+
     // Cambios hechos sin conexión (la cola de la app, ver resources/js/offline)
     Route::post('/sync', SyncController::class)->name('sync');
 
@@ -113,6 +118,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware('admin')->group(function () {
         Route::get('/admin/users', [AdminUserController::class, 'index'])->name('admin.users.index');
         Route::patch('/admin/users/{user}/role', [AdminUserController::class, 'updateRole'])->name('admin.users.role');
+        // La API de cotización del dólar es una sola para toda la app.
+        Route::put('/settings/dollar/api', [DollarSettingsController::class, 'updateApi'])->name('settings.dollar.api');
     });
 });
 

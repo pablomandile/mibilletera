@@ -74,7 +74,7 @@ class DollarRatesTest extends TestCase
     {
         $this->fakeApi();
 
-        $this->assertSame(['venta' => 2018.0, 'fecha' => '2026-11-18'], $this->rates()->rate('tarjeta', '2026-11-18'));
+        $this->assertSame(['venta' => 2018.0, 'fecha' => '2026-11-18', 'nombre' => 'Tarjeta'], $this->rates()->rate('tarjeta', '2026-11-18'));
 
         Http::assertSent(fn (Request $r) => $r->hasHeader('X-Api-Key', 'clave-de-prueba')
             && $r->url() === self::API.'/dolares/tarjeta/2026-11-18');
@@ -130,7 +130,7 @@ class DollarRatesTest extends TestCase
         $this->actingAs($user)->getJson('/cotizacion?tipo=blue&fecha=2026-11-18')
             ->assertOk()->assertJson(['tipo' => 'blue', 'venta' => 1418, 'fecha' => '2026-11-18']);
 
-        $this->actingAs($user)->getJson('/cotizacion?tipo=cripto&fecha=2026-11-18')->assertUnprocessable();
+        $this->actingAs($user)->getJson('/cotizacion?tipo=No-Valido!&fecha=2026-11-18')->assertUnprocessable();
     }
 
     public function test_the_form_route_without_rate_answers_null(): void

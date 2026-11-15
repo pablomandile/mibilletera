@@ -6,7 +6,6 @@ use App\Models\AppSetting;
 use App\Services\DollarRates;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -29,6 +28,8 @@ class DollarSettingsController extends Controller
         $props = [
             'types' => $types,
             'live' => $live !== null,
+            // Sin clave no hay API que consultar (no es que esté caída).
+            'configured' => (bool) $rates->key(),
             'expense' => DollarRates::typeFor('expense', $user),
             'income' => DollarRates::typeFor('income', $user),
             'isAdmin' => $user->isAdmin(),

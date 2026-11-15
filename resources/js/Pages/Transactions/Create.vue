@@ -20,6 +20,7 @@ const props = defineProps({
     accounts: { type: Array, default: () => [] },
     currencies: { type: Array, default: () => [] },
     defaultCurrency: { type: String, default: 'ARS' },
+    dollarTypes: { type: Object, default: () => ({ expense: 'tarjeta', income: 'blue' }) },
     transaction: { type: Object, default: null }, // si viene, es edición
 });
 
@@ -97,11 +98,11 @@ const needsRate = computed(() =>
 );
 
 // ---- Cotización precargada (API de bambudev, vía /cotizacion) ----
-// Gastos: dólar tarjeta; ingresos: dólar blue. Del día del movimiento. Queda
-// editable; sin respuesta (sin conexión, fecha vieja), se carga a mano.
-const rateType = computed(() => (type.value === 'income' ? 'blue' : 'tarjeta'));
-const RATE_NAMES = { tarjeta: 'Dólar tarjeta', blue: 'Dólar blue' };
-const rateInfo = ref(null); // { tipo, fecha, pedida } de la última precarga, o { failed: true }
+// El dólar que cada uno eligió en Ajustes para gastos e ingresos (por defecto
+// tarjeta y blue), del día del movimiento. Queda editable; sin respuesta (sin
+// conexión, fecha vieja), se carga a mano.
+const rateType = computed(() => (type.value === 'income' ? props.dollarTypes.income : props.dollarTypes.expense));
+const rateInfo = ref(null); // { nombre, fecha, pedida } de la última precarga, o { failed: true }
 const rateLoading = ref(false);
 let rateRequest = 0;
 
@@ -135,7 +136,7 @@ async function loadRate() {
         if (data?.venta) {
             exchangeRate.value = data.venta;
             rateAuto.value = true;
-            rateInfo.value = { tipo, fecha: data.fecha, pedida: fecha };
+            rateInfo.value = { nombre: data.nombre || tipo, fecha: data.fecha, pedida: fecha };
         } else {
             failRate();
         }
@@ -155,7 +156,7 @@ const rateHint = computed(() => {
     if (!info) return '';
     if (info.failed) return 'Sin cotización del día: cargala a mano.';
     const [y, m, d] = info.fecha.split('-');
-    return `${RATE_NAMES[info.tipo]} del ${d}/${m}/${y}${info.fecha !== info.pedida ? ' (último disponible)' : ''}`;
+    return `Dólar ${info.nombre} del ${d}/${m}/${y}${info.fecha !== info.pedida ? ' (último disponible)' : ''}`;
 });
 const crossCurrency = computed(() =>
     type.value === 'transfer' &&

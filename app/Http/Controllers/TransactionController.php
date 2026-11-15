@@ -6,6 +6,7 @@ use App\Actions\TransactionActions;
 use App\Actions\TransactionPaymentActions;
 use App\Models\Currency;
 use App\Models\Transaction;
+use App\Services\DollarRates;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Inertia\Inertia;
@@ -148,6 +149,11 @@ class TransactionController extends Controller
                 ->get(['id', 'name', 'type', 'currency_code', 'color', 'icon', 'accepts_installments']),
             'currencies' => Currency::orderBy('code')->get(['code', 'name', 'symbol']),
             'defaultCurrency' => $user->default_currency,
+            // El dólar que se precarga en un gasto y en un ingreso (Ajustes → Cotización del dólar).
+            'dollarTypes' => [
+                'expense' => DollarRates::typeFor('expense', $user),
+                'income' => DollarRates::typeFor('income', $user),
+            ],
         ];
     }
 }

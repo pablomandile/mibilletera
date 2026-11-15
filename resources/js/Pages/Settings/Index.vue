@@ -15,7 +15,7 @@ import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
     IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle, IconTextSize,
-    IconFileText, IconShieldLock, IconCookie, IconFolders,
+    IconFileText, IconShieldLock, IconCookie, IconFolders, IconCurrencyDollar,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -86,6 +86,7 @@ const groups = [
             { label: 'Categorías', icon: IconCategory, href: '/categories' },
             { label: 'Supercategorías', icon: IconFolders, href: '/supercategories' },
             { label: 'Cuentas y métodos de pago', icon: IconWallet, href: '/accounts' },
+            { label: 'Cotización del dólar', icon: IconCurrencyDollar, href: '/settings/dollar' },
         ],
     },
     {
