@@ -42,6 +42,12 @@ return [
         'key' => env('BAMBUDEV_API_KEY'),
     ],
 
+    // Inflación mensual del INDEC para Herramientas → Rendimiento de tu cuenta
+    // (API pública de CalculAR, sin clave).
+    'calcular' => [
+        'url' => env('CALCULAR_API_URL', 'https://calcular.bambudev.com.ar'),
+    ],
+
     'google' => [
         'client_id' => env('GOOGLE_CLIENT_ID'),
         'client_secret' => env('GOOGLE_CLIENT_SECRET'),

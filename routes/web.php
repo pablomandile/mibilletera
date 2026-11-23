@@ -10,6 +10,7 @@ use App\Http\Controllers\CotizacionController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\DollarSettingsController;
 use App\Http\Controllers\ExportController;
+use App\Http\Controllers\HerramientasController;
 use App\Http\Controllers\Legales\LegalesController;
 use App\Http\Controllers\MonthlyPdfController;
 use App\Http\Controllers\NotificationController;
@@ -77,6 +78,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     ]))->name('settings.index');
 
     Route::get('/about', AboutController::class)->name('about');
+
+    // Herramientas: calculadoras portadas de CalculAR.
+    Route::get('/herramientas/descuento-con-tope', [HerramientasController::class, 'descuento'])->name('herramientas.descuento');
+    Route::get('/herramientas/rendimiento-cuenta', [HerramientasController::class, 'rendimiento'])->name('herramientas.rendimiento');
 
     Route::patch('/preferences', [PreferencesController::class, 'update'])->name('preferences.update');
 

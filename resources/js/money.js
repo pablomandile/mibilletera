@@ -22,3 +22,11 @@ export const formatMoneyWrappable = (value, symbol = '$') =>
 // donde hay que respetar exactamente lo que se está tecleando).
 export const formatInteger = (value) =>
     Number(value || 0).toLocaleString('es-AR', { maximumFractionDigits: 0 });
+
+// Una fracción como porcentaje (0.188 → "18,80 %"). Espacio duro antes del %:
+// así no queda solo en otra línea.
+export const formatPercent = (fraction, decimals = 2) =>
+    (Number(fraction ?? 0) * 100).toLocaleString('es-AR', {
+        minimumFractionDigits: decimals,
+        maximumFractionDigits: decimals,
+    }) + ' %';

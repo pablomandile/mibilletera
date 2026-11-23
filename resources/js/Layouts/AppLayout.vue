@@ -21,6 +21,8 @@ import {
     IconBell,
     IconSearch,
     IconX,
+    IconDiscount,
+    IconPigMoney,
 } from '@tabler/icons-vue';
 import { offline, cachedAt } from '@/offline/connection';
 import { ops } from '@/offline/outbox';
@@ -52,6 +54,12 @@ const planItems = [
     { label: 'Presupuestos', href: '/budgets', icon: IconChartHistogram },
     { label: 'Transacciones recurrentes', href: '/recurring', icon: IconClockDollar },
     { label: 'Recordatorios', href: '/reminders', icon: IconBell },
+];
+
+// Calculadoras sueltas (portadas de CalculAR). Igual que Planificación: en mobile, desde Ajustes.
+const toolItems = [
+    { label: 'Descuento con tope', href: '/herramientas/descuento-con-tope', icon: IconDiscount },
+    { label: 'Rendimiento de tu cuenta', href: '/herramientas/rendimiento-cuenta', icon: IconPigMoney },
 ];
 
 // ---- Búsqueda (mobile) ----
@@ -164,7 +172,7 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
                 </span>
             </div>
 
-            <nav class="flex-1 px-3 py-4 space-y-1">
+            <nav class="flex-1 min-h-0 overflow-y-auto px-3 py-4 space-y-1">
                 <Link
                     v-for="item in navItems"
                     :key="item.href"
@@ -201,6 +209,20 @@ onUnmounted(() => window.removeEventListener('offline:miss', onOfflineMiss));
                 <p class="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wide text-surface-500">Planificación</p>
                 <Link
                     v-for="item in planItems"
+                    :key="item.href"
+                    :href="item.href"
+                    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"
+                    :class="isActive(item.href)
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-surface-600 dark:text-surface-300 hover:bg-surface-100 dark:hover:bg-surface-800'"
+                >
+                    <component :is="item.icon" :size="22" :stroke="1.8" />
+                    {{ item.label }}
+                </Link>
+
+                <p class="px-3 pt-5 pb-1 text-xs font-medium uppercase tracking-wide text-surface-500">Herramientas</p>
+                <Link
+                    v-for="item in toolItems"
                     :key="item.href"
                     :href="item.href"
                     class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-colors"

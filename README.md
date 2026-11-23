@@ -20,6 +20,7 @@ Administrador de gastos personales inspirado en la app **Money Manager**. Permit
 - **Presupuestos** por categoría y global, con barra de progreso gasto vs. límite.
 - **Recurrentes**: transacciones automáticas periódicas generadas por un comando programado (con catch-up).
 - **Recordatorios** + **campanita de notificaciones** (badge de no leídos, panel, swipe para borrar).
+- **Herramientas** (portadas de CalculAR): **Descuento con tope** (cuánto gastar para aprovechar entero un reintegro con tope y cuánto pagás de verdad) y **Rendimiento de tu cuenta** (cuánto rinde por día, semana, mes y año el saldo de Mercado Pago o un banco, con TNA/TEA y tope; completa el saldo desde una cuenta y lo compara con la inflación del último mes del INDEC, que trae de la API de CalculAR).
 - **Ajustes**: perfil, moneda predeterminada, tema claro/oscuro, vibración del teclado, gestión de categorías y cuentas, y **Acerca de** (autor y contacto).
 - **Responsive** (sidebar en PC / barra inferior con botón **+** en mobile) + **PWA instalable**.
 

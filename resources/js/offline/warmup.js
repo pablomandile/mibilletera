@@ -18,6 +18,8 @@ const PAGES = [
     '/budgets',
     '/recurring',
     '/reminders',
+    '/herramientas/descuento-con-tope',
+    '/herramientas/rendimiento-cuenta',
 ];
 
 // En hora local: toISOString() es UTC y a la noche del último día ya da el mes siguiente.

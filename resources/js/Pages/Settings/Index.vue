@@ -15,7 +15,7 @@ import {
     IconUser, IconCategory, IconWallet, IconCoin, IconChartHistogram,
     IconClockDollar, IconBell, IconMoon, IconSun, IconChevronRight,
     IconLogout, IconShieldCheck, IconX, IconDeviceMobileVibration, IconInfoCircle, IconTextSize,
-    IconFileText, IconShieldLock, IconCookie, IconFolders, IconCurrencyDollar,
+    IconFileText, IconShieldLock, IconCookie, IconFolders, IconCurrencyDollar, IconDiscount, IconPigMoney,
 } from '@tabler/icons-vue';
 
 const props = defineProps({
@@ -95,6 +95,13 @@ const groups = [
             { label: 'Presupuestos', icon: IconChartHistogram, href: '/budgets' },
             { label: 'Transacciones recurrentes', icon: IconClockDollar, href: '/recurring' },
             { label: 'Recordatorios', icon: IconBell, href: '/reminders' },
+        ],
+    },
+    {
+        title: 'Herramientas',
+        items: [
+            { label: 'Descuento con tope', icon: IconDiscount, href: '/herramientas/descuento-con-tope' },
+            { label: 'Rendimiento de tu cuenta', icon: IconPigMoney, href: '/herramientas/rendimiento-cuenta' },
         ],
     },
 ];
